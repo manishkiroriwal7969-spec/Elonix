@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security | ELONIX (ELX) Protocol</title>
+    <meta name="description" content="Immutable decentralized architecture, 0% transaction taxes, non-mintable supply rules and zero blacklists verified.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Ethers.js Browser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="page-entrance">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification" role="alert" aria-live="assertive">Address Copied!</div>
+
+    <!-- Background Cyber Grid and Glow effects -->
+    <div class="cyber-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                <span class="logo-accent">ELONIX</span>
+                <span class="ticker">[ELX]</span>
+            </a>
+            
+            <nav class="nav" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="about.html" class="nav-link">About</a></li>
+                    <li><a href="security.html" class="nav-link nav-link-active">Security</a></li>
+                    <li><a href="mining.html" class="nav-link">Live Mining</a></li>
+                    <li><a href="webminer.html" class="nav-link">Web Miner</a></li>
+                    <li><a href="tokenomics.html" class="nav-link">Tokenomics</a></li>
+                    <li><a href="roadmap.html" class="nav-link">Roadmap</a></li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <button id="connectWalletBtn" class="btn btn-wallet btn-glow">
+                    <span class="wallet-indicator"></span>
+                    <span id="connectWalletText">Connect Wallet</span>
+                </button>
+                <button class="mobile-nav-toggle" aria-label="Toggle navigation menu">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay">
+        <ul class="mobile-nav-list">
+            <li><a href="about.html" class="mobile-nav-link">About</a></li>
+            <li><a href="security.html" class="mobile-nav-link mobile-nav-link-active">Security</a></li>
+            <li><a href="mining.html" class="mobile-nav-link">Live Mining</a></li>
+            <li><a href="webminer.html" class="mobile-nav-link">Web Miner</a></li>
+            <li><a href="tokenomics.html" class="mobile-nav-link">Tokenomics</a></li>
+            <li><a href="roadmap.html" class="mobile-nav-link">Roadmap</a></li>
+            <li>
+                <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow" style="margin-top: 2rem; width: 100%;">
+                    <span class="wallet-indicator"></span>
+                    <span id="mobileConnectWalletText">Connect Wallet</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <main style="padding-top: 8rem; min-height: calc(100vh - 300px);">
+        <!-- Trust & Badges Section -->
+        <section id="trust" class="trust-section" style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Audit & Controls</span>
+                    <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">Cryptographic <span class="gradient-text">Trust Rules</span></h1>
+                    <p class="section-subtitle">Verified parameters hardcoded into the contract bytecode, eliminating governance hazards and upgrade risks.</p>
+                </div>
+
+                <!-- 3D Graphic Shield Element & Security Integrity Checklist (Side-by-Side Grid) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem; margin-bottom: 4rem; align-items: stretch;">
+                    <!-- Left: 3D Shield -->
+                    <div class="card-glow card-3d" style="padding: 2.5rem; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5rem;">
+                        <div class="shield-3d-visual" style="height: 120px; width: 120px; position: relative;">
+                            <div class="shield-cube-3d">
+                                <span class="cube-side face-front">🔒</span>
+                                <span class="cube-side face-back">🛡️</span>
+                                <span class="cube-side face-left">ELX</span>
+                                <span class="cube-side face-right">BSC</span>
+                                <span class="cube-side face-top">0%</span>
+                                <span class="cube-side face-bottom">100%</span>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="font-size: 1.35rem; margin-bottom: 0.5rem;">Immutable Open-Source Execution</h3>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary);">The ELONIX smart contract is permanently locked on-chain. No private keys can modify its storage structure, transfer variables, or transaction routing.</p>
+                        </div>
+                    </div>
+
+                    <!-- Right: Smart Contract Integrity & Security Check -->
+                    <div class="security-checklist-card card-glow card-3d">
+                        <div class="checklist-header">
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; font-family: var(--font-heading); font-weight: 600;">System Security Audit</span>
+                            <span style="font-size: 0.75rem; color: var(--success); font-family: var(--font-heading); font-weight: 600; display: flex; align-items: center; gap: 0.25rem;">
+                                <span class="blink-green"></span> ACTIVE
+                            </span>
+                        </div>
+                        <h3 style="font-size: 1.25rem; font-family: var(--font-heading); font-weight: 700; margin-bottom: 0.5rem;">Contract Parameter Verification</h3>
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div class="checklist-item">
+                                <div class="checkbox-indicator">
+                                    <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <span>No Upgradeable Proxies Detected</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checkbox-indicator">
+                                    <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <span>Compiler Source Match (solc v0.8.20)</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checkbox-indicator">
+                                    <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <span>0% Transfer/Tax Fees Verified</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checkbox-indicator">
+                                    <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <span>Owner Mint Functions Revoked</span>
+                            </div>
+                            <div class="checklist-item">
+                                <div class="checkbox-indicator">
+                                    <svg class="checkmark-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                                </div>
+                                <span>Liquidity Locked Period Verified (PinkSale)</span>
+                            </div>
+                        </div>
+
+                        <!-- Score Panel -->
+                        <div class="integrity-score-wrap">
+                            <div class="score-details">
+                                <span class="score-label">Integrity Trust Index</span>
+                                <span style="font-size: 0.8rem; color: var(--text-secondary);">100% Immutable Parameters</span>
+                            </div>
+                            <div class="score-val" id="checklistScore">0%</div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="trust-badges-grid">
+                    <div class="trust-badge-card card-3d">
+                        <div class="badge-icon-wrap icon-verified">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                                <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                            </svg>
+                        </div>
+                        <h3 class="badge-title">BscScan Verified</h3>
+                        <p class="badge-desc">100% verified open-source smart contract bytecode and architecture.</p>
+                    </div>
+                    
+                    <div class="trust-badge-card card-3d">
+                        <div class="badge-icon-wrap icon-tax">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                            </svg>
+                        </div>
+                        <h3 class="badge-title">0% Tax Protocol</h3>
+                        <p class="badge-desc">No transactional buying, selling, or transfer fees. Pure asset retention.</p>
+                    </div>
+
+                    <div class="trust-badge-card card-3d">
+                        <div class="badge-icon-wrap icon-mint">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                                <path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="badge-title">Non-Mintable Supply</h3>
+                        <p class="badge-desc">Smart contract forbids creation of new tokens beyond the maximum supply cap.</p>
+                    </div>
+
+                    <div class="trust-badge-card card-3d">
+                        <div class="badge-icon-wrap icon-blacklist">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                            </svg>
+                        </div>
+                        <h3 class="badge-title">Zero Blacklists</h3>
+                        <p class="badge-desc">No whitelist, blacklist, or honeypot mechanics built in. Fully decentralized code.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-top">
+                <div class="footer-brand" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="index.html" class="logo">
+                        <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                        <span class="logo-accent">ELONIX</span>
+                        <span class="ticker">[ELX]</span>
+                    </a>
+                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB Chain.</p>
+                </div>
+                <div class="footer-socials">
+                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="Telegram Channel">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z"/>
+                        </svg>
+                    </a>
+                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="X (Twitter) Profile">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener" aria-label="GitHub Repository">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <hr class="footer-divider">
+            
+            <div class="footer-bottom">
+                <p class="disclaimer">
+                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance, and consult with certified financial advisors before participating.
+                </p>
+                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT open-source license.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Script -->
+    <script src="app.js?v=2"></script>
+</body>
+</html>

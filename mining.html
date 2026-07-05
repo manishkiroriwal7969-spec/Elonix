@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Mining | ELONIX (ELX) Protocol</title>
+    <meta name="description" content="View live smart contract statistics on the BNB Smart Chain, remaining locked emissions supply, and daily distribution runs.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Ethers.js Browser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="page-entrance">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification" role="alert" aria-live="assertive">Address Copied!</div>
+
+    <!-- Background Cyber Grid and Glow effects -->
+    <div class="cyber-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                <span class="logo-accent">ELONIX</span>
+                <span class="ticker">[ELX]</span>
+            </a>
+            
+            <nav class="nav" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="about.html" class="nav-link">About</a></li>
+                    <li><a href="security.html" class="nav-link">Security</a></li>
+                    <li><a href="mining.html" class="nav-link nav-link-active">Live Mining</a></li>
+                    <li><a href="webminer.html" class="nav-link">Web Miner</a></li>
+                    <li><a href="tokenomics.html" class="nav-link">Tokenomics</a></li>
+                    <li><a href="roadmap.html" class="nav-link">Roadmap</a></li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <button id="connectWalletBtn" class="btn btn-wallet btn-glow">
+                    <span class="wallet-indicator"></span>
+                    <span id="connectWalletText">Connect Wallet</span>
+                </button>
+                <button class="mobile-nav-toggle" aria-label="Toggle navigation menu">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay">
+        <ul class="mobile-nav-list">
+            <li><a href="about.html" class="mobile-nav-link">About</a></li>
+            <li><a href="security.html" class="mobile-nav-link">Security</a></li>
+            <li><a href="mining.html" class="mobile-nav-link mobile-nav-link-active">Live Mining</a></li>
+            <li><a href="webminer.html" class="mobile-nav-link">Web Miner</a></li>
+            <li><a href="tokenomics.html" class="mobile-nav-link">Tokenomics</a></li>
+            <li><a href="roadmap.html" class="mobile-nav-link">Roadmap</a></li>
+            <li>
+                <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow" style="margin-top: 2rem; width: 100%;">
+                    <span class="wallet-indicator"></span>
+                    <span id="mobileConnectWalletText">Connect Wallet</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <main style="padding-top: 8rem; min-height: calc(100vh - 300px);">
+        <!-- Live Mining Dashboard Section -->
+        <section id="mining" class="mining-section" style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Decentralized Engine</span>
+                    <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">Live Mining <span class="gradient-text">Dashboard</span></h1>
+                    <p class="section-subtitle">Real-time smart contract data fetched directly from the BNB Smart Chain network.</p>
+                </div>
+                
+                <!-- Live Node Connection Status Panel -->
+                <div class="node-status-panel">
+                    <div class="status-item">
+                        <span class="blink-green"></span>
+                        <span>Node Status:</span>
+                        <span class="status-item-val" style="color: var(--success);">ONLINE</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Synced Block:</span>
+                        <span class="status-item-val" id="nodeBlockVal">#41,209,000</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Connection Ping:</span>
+                        <span class="status-item-val" id="nodePingVal">-- ms</span>
+                    </div>
+                    <div class="status-item">
+                        <span>BSC Gas Price:</span>
+                        <span class="status-item-val" id="nodeGasVal">-- Gwei</span>
+                    </div>
+                </div>
+
+                <!-- Dashboard Grid -->
+                <div class="mining-grid">
+                    <div class="mining-card card-glow card-3d">
+                        <div class="mining-card-header">
+                            <span class="mining-card-label">TOTAL MAXIMUM SUPPLY</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" class="label-icon text-cyan">
+                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                            </svg>
+                        </div>
+                        <div class="mining-val font-tech">182,500 <span class="val-unit">ELX</span></div>
+                        <p class="mining-card-footer">Fixed hardcap coded at genesis.</p>
+                    </div>
+
+                    <div class="mining-card card-glow card-3d">
+                        <div class="mining-card-header">
+                            <span class="mining-card-label">TOKENS MINED SO FAR</span>
+                            <span class="pulse-cyan display-pulse" id="minedPulse"></span>
+                        </div>
+                        <div class="mining-val font-tech" id="minedVal">-- <span class="val-unit">ELX</span></div>
+                        <div class="mining-progress-container">
+                            <div class="mining-progress-bar" id="progressBar" style="width: 0%"></div>
+                        </div>
+                        <p class="mining-card-footer" id="progressPercentage">Loading contract data...</p>
+                    </div>
+
+                    <div class="mining-card card-glow card-3d">
+                        <div class="mining-card-header">
+                            <span class="mining-card-label">REMAINING SUPPLY LOCKED</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" class="label-icon text-cyan">
+                                <path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                        </div>
+                        <div class="mining-val font-tech" id="lockedVal">-- <span class="val-unit">ELX</span></div>
+                        <p class="mining-card-footer">Locked emissions pool for daily distribution.</p>
+                    </div>
+
+                    <div class="mining-card card-glow card-3d">
+                        <div class="mining-card-header">
+                            <span class="mining-card-label">LAST MINING TIMESTAMP</span>
+                            <svg viewBox="0 0 24 24" width="18" height="18" class="label-icon text-cyan">
+                                <path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
+                            </svg>
+                        </div>
+                        <div class="mining-val font-tech date-val" id="timestampVal">--</div>
+                        <p class="mining-card-footer">Automated daily emission release timestamp.</p>
+                    </div>
+                </div>
+
+                <!-- Web3 Action Widget -->
+                <div class="mining-widget card-3d">
+                    <div class="widget-details">
+                        <h3 class="widget-title">On-Chain Emission Management</h3>
+                        <p class="widget-desc">Anyone can view daily emission logs directly on the ledger. However, triggering the automated daily emission distribution requires execution by the contract owner account.</p>
+                    </div>
+                    <div class="widget-actions">
+                        <a href="https://bscscan.com/token/0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE" target="_blank" rel="noopener" class="btn btn-secondary">
+                            Verify Logs on BscScan
+                            <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18">
+                                <path fill="currentColor" d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41 9.83-9.83V9h2V3h-6z"/>
+                            </svg>
+                        </a>
+                        <button id="executeMiningBtn" class="btn btn-primary btn-glow" disabled>
+                            Execute Daily Mining
+                            <span class="btn-tooltip" id="miningBtnTooltip">Connect wallet of contract owner to execute</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-top">
+                <div class="footer-brand" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="index.html" class="logo">
+                        <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                        <span class="logo-accent">ELONIX</span>
+                        <span class="ticker">[ELX]</span>
+                    </a>
+                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB Chain.</p>
+                </div>
+                <div class="footer-socials">
+                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="Telegram Channel">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z"/>
+                        </svg>
+                    </a>
+                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="X (Twitter) Profile">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener" aria-label="GitHub Repository">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <hr class="footer-divider">
+            
+            <div class="footer-bottom">
+                <p class="disclaimer">
+                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance, and consult with certified financial advisors before participating.
+                </p>
+                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT open-source license.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Script -->
+    <script src="app.js?v=2"></script>
+</body>
+</html>

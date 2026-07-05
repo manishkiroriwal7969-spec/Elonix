@@ -1,0 +1,13 @@
+{
+  "name": "elonix-landing-page",
+  "version": "1.0.0",
+  "description": "ELONIX (ELX) premium DeFi mining landing page",
+  "main": "index.html",
+  "scripts": {
+    "dev": "http-server -p 3000 -c-1"
+  },
+  "dependencies": {
+    "ethers": "^6.7.0",
+    "http-server": "^14.1.1"
+  }
+}

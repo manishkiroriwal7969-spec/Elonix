@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roadmap | ELONIX (ELX) Protocol</title>
+    <meta name="description" content="5-Year growth milestones, emission epochs, secondary staking models, and utility integrations for the ELONIX DeFi network.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Ethers.js Browser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="page-entrance">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification" role="alert" aria-live="assertive">Address Copied!</div>
+
+    <!-- Background Cyber Grid and Glow effects -->
+    <div class="cyber-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                <span class="logo-accent">ELONIX</span>
+                <span class="ticker">[ELX]</span>
+            </a>
+            
+            <nav class="nav" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="about.html" class="nav-link">About</a></li>
+                    <li><a href="security.html" class="nav-link">Security</a></li>
+                    <li><a href="mining.html" class="nav-link">Live Mining</a></li>
+                    <li><a href="webminer.html" class="nav-link">Web Miner</a></li>
+                    <li><a href="tokenomics.html" class="nav-link">Tokenomics</a></li>
+                    <li><a href="roadmap.html" class="nav-link nav-link-active">Roadmap</a></li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <button id="connectWalletBtn" class="btn btn-wallet btn-glow">
+                    <span class="wallet-indicator"></span>
+                    <span id="connectWalletText">Connect Wallet</span>
+                </button>
+                <button class="mobile-nav-toggle" aria-label="Toggle navigation menu">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay">
+        <ul class="mobile-nav-list">
+            <li><a href="about.html" class="mobile-nav-link">About</a></li>
+            <li><a href="security.html" class="mobile-nav-link">Security</a></li>
+            <li><a href="mining.html" class="mobile-nav-link">Live Mining</a></li>
+            <li><a href="webminer.html" class="mobile-nav-link">Web Miner</a></li>
+            <li><a href="tokenomics.html" class="mobile-nav-link">Tokenomics</a></li>
+            <li><a href="roadmap.html" class="mobile-nav-link mobile-nav-link-active">Roadmap</a></li>
+            <li>
+                <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow" style="margin-top: 2rem; width: 100%;">
+                    <span class="wallet-indicator"></span>
+                    <span id="mobileConnectWalletText">Connect Wallet</span>
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <main style="padding-top: 8rem; min-height: calc(100vh - 300px);">
+        <!-- 5-Year Growth Roadmap (Interactive Timeline) -->
+        <section id="roadmap" class="roadmap-section" style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Milestone Plan</span>
+                    <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">5-Year Growth <span class="gradient-text">Roadmap</span></h1>
+                    <p class="section-subtitle">Chronological progression phases for token distribution, ecosystem building, and utility integration.</p>
+                </div>
+
+                <!-- Timeline Component inside 3D perspective path layout -->
+                <div class="timeline-container-3d" style="perspective: 1200px;">
+                    <div class="timeline-container" style="transform-style: preserve-3d; transform: rotateX(5deg);">
+                        <div class="timeline-line"></div>
+                        
+                        <!-- Phase 1 -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <span class="marker-dot"></span>
+                            </div>
+                            <div class="timeline-card card-glow card-3d">
+                                <div class="phase-number">PHASE 1</div>
+                                <h3 class="phase-title">Genesis & Fair Launch</h3>
+                                <ul class="phase-bullets">
+                                    <li>Successful smart contract deployment on BNB Smart Chain.</li>
+                                    <li>100% source code verification and verification logs on BscScan.</li>
+                                    <li>Liquidity pool setup and tracking verification on PinkSale/Uncx.</li>
+                                    <li>Autonomous daily emission protocol initialization.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Phase 2 -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <span class="marker-dot"></span>
+                            </div>
+                            <div class="timeline-card card-glow card-3d">
+                                <div class="phase-number">PHASE 2</div>
+                                <h3 class="phase-title">The Mining Era</h3>
+                                <ul class="phase-bullets">
+                                    <li>Community growth and alignment across X (Twitter) and Telegram channels.</li>
+                                    <li>Public dashboard verification system tracking daily 100 ELX emission transfers.</li>
+                                    <li>Listing and index tracking configurations on DexTools, DexScreener, and CoinGecko.</li>
+                                    <li>Initial automated analytics tracking.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Phase 3 -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <span class="marker-dot"></span>
+                            </div>
+                            <div class="timeline-card card-glow card-3d">
+                                <div class="phase-number">PHASE 3</div>
+                                <h3 class="phase-title">Ecosystem Expansion</h3>
+                                <ul class="phase-bullets">
+                                    <li>Creation and audit of secondary staking infrastructure for ELX mining yields.</li>
+                                    <li>Initiation of token-pairing DEX pools to encourage liquidity depth.</li>
+                                    <li>Strategic marketing initiatives targeting algorithmic and quant-focused trading platforms.</li>
+                                    <li>Educational campaigns on hyper-scarcity token economics.</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Phase 4 -->
+                        <div class="timeline-item">
+                            <div class="timeline-marker">
+                                <span class="marker-dot"></span>
+                            </div>
+                            <div class="timeline-card card-glow card-3d">
+                                <div class="phase-number">PHASE 4</div>
+                                <h3 class="phase-title">Utility Integration</h3>
+                                <ul class="phase-bullets">
+                                    <li>Exclusive access controls linking ELX hold balance to advanced portfolio tools.</li>
+                                    <li>Launch of algorithmic trading scripts and indicators built for the ELX ecosystem.</li>
+                                    <li>Integration of ELX utilities into AI-driven market intelligence platforms.</li>
+                                    <li>Establishment of the ELONIX decentralized ecosystem foundation.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-top">
+                <div class="footer-brand" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="index.html" class="logo">
+                        <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                        <span class="logo-accent">ELONIX</span>
+                        <span class="ticker">[ELX]</span>
+                    </a>
+                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB Chain.</p>
+                </div>
+                <div class="footer-socials">
+                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="Telegram Channel">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z"/>
+                        </svg>
+                    </a>
+                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="X (Twitter) Profile">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener" aria-label="GitHub Repository">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <hr class="footer-divider">
+            
+            <div class="footer-bottom">
+                <p class="disclaimer">
+                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance, and consult with certified financial advisors before participating.
+                </p>
+                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT open-source license.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Script -->
+    <script src="app.js?v=2"></script>
+</body>
+</html>
