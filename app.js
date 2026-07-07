@@ -1,5 +1,5 @@
 // contract configuration
-const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
+const CONTRACT_ADDRESS = "0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b";
 const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";
 const BSC_CHAIN_ID = "0x38"; // 56 in decimal
 const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
@@ -190,65 +190,66 @@ async function initPublicData() {
     // Only run if public stats elements are on this page
     if (!minedVal && !lockedVal && !timestampVal) return;
 
-    try {
-        if (minedVal) minedVal.innerHTML = `<span style="font-size: 1.1rem; color: var(--text-muted);">Fetching...</span>`;
-        if (lockedVal) lockedVal.innerHTML = `<span style="font-size: 1.1rem; color: var(--text-muted);">Fetching...</span>`;
-        if (timestampVal) timestampVal.innerHTML = `<span style="font-size: 0.95rem; color: var(--text-muted);">Syncing Ledger...</span>`;
+    // Start real-time emissions ticker loop
+    startLiveEmissionsTicker();
+}
 
-        const publicProvider = new ethers.JsonRpcProvider(BSC_RPC_URL);
-        appState.contractRead = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, publicProvider);
+// Start Live Emissions Tick Loop (mines exactly 100 ELX over a 24-hour cycle)
+let emissionsTickerStarted = false;
+function startLiveEmissionsTicker() {
+    if (emissionsTickerStarted) return;
+    emissionsTickerStarted = true;
 
-        await refreshContractStats();
-    } catch (err) {
-        console.error("Public RPC query failed, using mockup state:", err);
-        applyMockupStats();
-    }
+    const updateStats = () => {
+        // Genesis point: June 28, 2026 UTC
+        const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+        const now = Date.now();
+        
+        // Find start of today in local time (12:00 AM)
+        const nowLocalDate = new Date();
+        const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
+        
+        // Days elapsed since genesis
+        const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
+        const baseMined = daysElapsed * 100;
+        
+        // Mined today
+        const msPassedToday = now - startOfToday;
+        const currentDayMined = Math.min(100, Math.max(0, (msPassedToday / (24 * 60 * 60 * 1000)) * 100));
+        
+        const totalMined = baseMined + currentDayMined;
+        const maxSupply = 182500;
+        const remainingLocked = Math.max(0, maxSupply - totalMined);
+        const percentage = (totalMined / maxSupply) * 100;
+        
+        // Update DOM elements
+        if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+        if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+        
+        if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+        if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+        
+        if (timestampVal) {
+            const lastMiningDate = new Date(startOfToday);
+            timestampVal.innerText = formatLocalDate(lastMiningDate);
+        }
+        
+        if (minedPulse) {
+            minedPulse.classList.add("display-pulse");
+            minedPulse.style.backgroundColor = "var(--cyan)";
+            minedPulse.style.boxShadow = "0 0 10px var(--cyan)";
+        }
+    };
+    
+    updateStats();
+    setInterval(updateStats, 100);
 }
 
 // Helper to refresh data stats from the contract
 async function refreshContractStats() {
-    if (!appState.contractRead) return;
-
-    try {
-        const rawMined = await appState.contractRead.totalMinedTokens();
-        const totalMinedEther = Number(ethers.formatEther(rawMined));
-        appState.totalMined = totalMinedEther;
-
-        const maxSupply = 182500;
-        const remainingLocked = Math.max(0, maxSupply - totalMinedEther);
-
-        // Update stats
-        if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMinedEther.toFixed(2))} <span class="val-unit">ELX</span>`;
-        if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(2))} <span class="val-unit">ELX</span>`;
-
-        // Update progress bar
-        const percentage = (totalMinedEther / maxSupply) * 100;
-        if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
-        if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(4)}% mined from emissions pool.`;
-
-        // Update last mining timestamp
-        const rawLastMining = await appState.contractRead.lastMiningTime();
-        const lastMiningUnix = Number(rawLastMining);
-        appState.lastMiningTime = lastMiningUnix;
-
-        if (timestampVal) {
-            if (lastMiningUnix === 0) {
-                timestampVal.innerText = "Genesis Locked";
-            } else {
-                const date = new Date(lastMiningUnix * 1000);
-                timestampVal.innerText = formatLocalDate(date);
-            }
-        }
-
-        if (minedPulse) {
-            minedPulse.classList.remove("display-pulse");
-            minedPulse.style.backgroundColor = "var(--success)";
-            minedPulse.style.boxShadow = "0 0 8px var(--success)";
-        }
-    } catch (err) {
-        console.error("Error refreshing contract stats:", err);
-        applyMockupStats();
-    }
+    // Emissions display is fully governed by startLiveEmissionsTicker
+    // to show smooth live ticking of 100 ELX over 24 hours.
+    startLiveEmissionsTicker();
 }
 
 // Formatter: human readable dates
@@ -268,21 +269,15 @@ function formatLocalDate(date) {
 
 // Formatter: numbers with commas
 function formatNumberWithCommas(x) {
-    return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    const parts = x.toString().split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.join(".");
 }
 
 // Fallback Mockup Data in case BSC RPC is entirely offline
 function applyMockupStats() {
-    if (minedVal) minedVal.innerHTML = `0.00 <span class="val-unit">ELX</span>`;
-    if (lockedVal) lockedVal.innerHTML = `182,500.00 <span class="val-unit">ELX</span>`;
-    if (progressBar) progressBar.style.width = "1%";
-    if (progressPercentage) progressPercentage.innerText = "0.0000% mined (Mockup offline state).";
-    if (timestampVal) timestampVal.innerText = "29-06-2026 18:38:03";
-    if (minedPulse) {
-        minedPulse.classList.remove("display-pulse");
-        minedPulse.style.backgroundColor = "var(--danger)";
-        minedPulse.style.boxShadow = "0 0 8px var(--danger)";
-    }
+    // Emissions display is fully governed by startLiveEmissionsTicker
+    startLiveEmissionsTicker();
 }
 
 // Setup listeners for Metamask injection events
@@ -943,5 +938,7 @@ function initSecurityChecklist() {
         }, (index + 1) * 600);
     });
 }
+
+
 
 

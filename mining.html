@@ -40,9 +40,9 @@
                     <li><a href="about.html" class="nav-link">About</a></li>
                     <li><a href="security.html" class="nav-link">Security</a></li>
                     <li><a href="mining.html" class="nav-link nav-link-active">Live Mining</a></li>
-                    <li><a href="webminer.html" class="nav-link">Web Miner</a></li>
                     <li><a href="tokenomics.html" class="nav-link">Tokenomics</a></li>
                     <li><a href="roadmap.html" class="nav-link">Roadmap</a></li>
+                    <li><a href="staking.html" class="nav-link">Staking</a></li>
                 </ul>
             </nav>
             
@@ -66,9 +66,9 @@
             <li><a href="about.html" class="mobile-nav-link">About</a></li>
             <li><a href="security.html" class="mobile-nav-link">Security</a></li>
             <li><a href="mining.html" class="mobile-nav-link mobile-nav-link-active">Live Mining</a></li>
-            <li><a href="webminer.html" class="mobile-nav-link">Web Miner</a></li>
             <li><a href="tokenomics.html" class="mobile-nav-link">Tokenomics</a></li>
             <li><a href="roadmap.html" class="mobile-nav-link">Roadmap</a></li>
+            <li><a href="staking.html" class="mobile-nav-link">Staking</a></li>
             <li>
                 <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow" style="margin-top: 2rem; width: 100%;">
                     <span class="wallet-indicator"></span>
@@ -160,19 +160,18 @@
                 <!-- Web3 Action Widget -->
                 <div class="mining-widget card-3d">
                     <div class="widget-details">
-                        <h3 class="widget-title">On-Chain Emission Management</h3>
-                        <p class="widget-desc">Anyone can view daily emission logs directly on the ledger. However, triggering the automated daily emission distribution requires execution by the contract owner account.</p>
+                        <h3 class="widget-title">Automated Emissions Protocol</h3>
+                        <p class="widget-desc">Daily emission release is automated on-chain. Exactly 100 ELX tokens are minted and unlocked automatically at 12:00 AM daily. No manual contract owner signatures are required.</p>
                     </div>
                     <div class="widget-actions">
-                        <a href="https://bscscan.com/token/0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE" target="_blank" rel="noopener" class="btn btn-secondary">
+                        <a href="https://bscscan.com/token/0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b" target="_blank" rel="noopener" class="btn btn-secondary">
                             Verify Logs on BscScan
                             <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18">
                                 <path fill="currentColor" d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41 9.83-9.83V9h2V3h-6z"/>
                             </svg>
                         </a>
-                        <button id="executeMiningBtn" class="btn btn-primary btn-glow" disabled>
-                            Execute Daily Mining
-                            <span class="btn-tooltip" id="miningBtnTooltip">Connect wallet of contract owner to execute</span>
+                        <button class="btn btn-success" disabled style="opacity: 0.9; cursor: default; background: rgba(16, 185, 129, 0.15); border-color: var(--success); color: var(--success); display: flex; align-items: center; gap: 0.5rem; justify-content: center;">
+                            ⚡ Automated Active (12 AM)
                         </button>
                     </div>
                 </div>

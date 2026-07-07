@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staking & Mining Portal | ELONIX (ELX) Protocol</title>
+    <meta name="description" content="Access the ELONIX DeFi client panel. Manage your staking deposits, run the web miner node, and stake your mined rewards under strict protocol parameters.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Ethers.js Browser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body class="page-entrance">
+    <!-- Toast Notification -->
+    <div id="toast" class="toast-notification" role="alert" aria-live="assertive">Address Copied!</div>
+
+    <!-- Background Cyber Grid and Glow effects -->
+    <div class="cyber-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <!-- Header Navigation -->
+    <header class="header">
+        <div class="container header-container">
+            <a href="index.html" class="logo">
+                <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                <span class="logo-accent">ELONIX</span>
+                <span class="ticker">[ELX]</span>
+            </a>
+            
+            <nav class="nav" aria-label="Main Navigation">
+                <ul class="nav-list">
+                    <li><a href="about.html" class="nav-link">About</a></li>
+                    <li><a href="security.html" class="nav-link">Security</a></li>
+                    <li><a href="mining.html" class="nav-link">Live Mining</a></li>
+                    <li><a href="tokenomics.html" class="nav-link">Tokenomics</a></li>
+                    <li><a href="roadmap.html" class="nav-link">Roadmap</a></li>
+                    <li><a href="staking.html" class="nav-link nav-link-active">Staking</a></li>
+                </ul>
+            </nav>
+            
+            <div class="header-actions">
+                <button class="mobile-nav-toggle" aria-label="Toggle navigation menu">
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                    <span class="bar"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay">
+        <ul class="mobile-nav-list">
+            <li><a href="about.html" class="mobile-nav-link">About</a></li>
+            <li><a href="security.html" class="mobile-nav-link">Security</a></li>
+            <li><a href="mining.html" class="mobile-nav-link">Live Mining</a></li>
+            <li><a href="tokenomics.html" class="mobile-nav-link">Tokenomics</a></li>
+            <li><a href="roadmap.html" class="mobile-nav-link">Roadmap</a></li>
+            <li><a href="staking.html" class="mobile-nav-link mobile-nav-link-active">Staking</a></li>
+        </ul>
+    </div>
+
+    <main style="padding-top: 8rem; min-height: calc(100vh - 300px);">
+        <!-- Staking Section -->
+        <section id="staking-portal" class="staking-section" style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
+            <div class="container">
+                <div class="section-header">
+                    <span class="section-tag">Client Control Panel</span>
+                    <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">Ecosystem <span class="gradient-text">Member Hub</span></h1>
+                    <p class="section-subtitle">Manage your validation nodes, run the browser-based web miner, and stake your tokens inside a single unified dashboard.</p>
+                </div>
+
+                <!-- Live Node Connection Status Panel -->
+                <div class="node-status-panel">
+                    <div class="status-item">
+                        <span class="blink-green"></span>
+                        <span>Staking Node Status:</span>
+                        <span class="status-item-val" style="color: var(--success);">ONLINE</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Ledger Sync:</span>
+                        <span class="status-item-val" id="nodeBlockVal">#41,209,000</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Relay Ping:</span>
+                        <span class="status-item-val" id="nodePingVal">45 ms</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Gas Matrix:</span>
+                        <span class="status-item-val" id="nodeGasVal">3.12 Gwei</span>
+                    </div>
+                </div>
+
+                <!-- ==================== AUTHENTICATION WRAPPER ==================== -->
+                <div id="authContainer" class="auth-wrapper" style="display: block;">
+                    <div class="auth-card card-glow card-3d">
+                        <div class="auth-tabs">
+                            <button id="loginTab" class="auth-tab active" aria-selected="true">Sign In</button>
+                            <button id="registerTab" class="auth-tab" aria-selected="false">Create Account</button>
+                        </div>
+                        
+                        <div class="auth-body">
+                            <div id="authErrorMsg" class="auth-error-alert" style="display: none;" role="alert"></div>
+                            
+                            <!-- Login Form -->
+                            <form id="loginForm" class="auth-form" style="display: flex;">
+                                <div class="form-group">
+                                    <label for="loginUsername" class="form-label">Username</label>
+                                    <input type="text" id="loginUsername" class="form-input" placeholder="Enter username" autocomplete="username" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="loginPassword" class="form-label">Password</label>
+                                    <input type="password" id="loginPassword" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-glow btn-full" style="margin-top: 1.5rem;">
+                                    Verify & Log In
+                                </button>
+                                <div class="auth-tip-box">
+                                    <span>💡 <strong>Quick Demo Access:</strong> Use username <strong>demo</strong> and password <strong>demo123</strong> (if not yet registered).</span>
+                                </div>
+                            </form>
+                            
+                            <!-- Register Form -->
+                            <form id="registerForm" class="auth-form" style="display: none;">
+                                <div class="form-group">
+                                    <label for="regUsername" class="form-label">Username</label>
+                                    <input type="text" id="regUsername" class="form-input" placeholder="Choose username" autocomplete="username" minlength="3" maxlength="15" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="regEmail" class="form-label">Email Address</label>
+                                    <input type="email" id="regEmail" class="form-input" placeholder="name@domain.com" autocomplete="email" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="regPassword" class="form-label">Password (Min 6 chars)</label>
+                                    <input type="password" id="regPassword" class="form-input" placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="regConfirmPassword" class="form-label">Confirm Password</label>
+                                    <input type="password" id="regConfirmPassword" class="form-input" placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-glow btn-full" style="margin-top: 1.5rem;">
+                                    Create Security Account
+                                </button>
+                                <div class="auth-tip-box">
+                                    <span>🎁 All newly registered accounts are pre-allocated <strong>10 sandbox ELX</strong> to instantly start testing staking yield mechanics!</span>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==================== DASHBOARD WRAPPER ==================== -->
+                <div id="dashboardContainer" class="dashboard-wrapper" style="display: none;">
+                    
+                    <!-- Dashboard Profile Banner -->
+                    <div class="dashboard-profile-banner">
+                        <div class="profile-left">
+                            <div class="avatar-glow">👤</div>
+                            <div class="profile-details">
+                                <div class="welcome-row">
+                                    <span class="welcome-text">Client Node Account:</span>
+                                    <span id="clientUsername" class="username-text">username</span>
+                                </div>
+                                <div class="wallet-row">
+                                    <span class="label">MetaMask Address:</span>
+                                    <span id="clientWalletAddress" class="wallet-address-val">No Web3 wallet linked</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="profile-right">
+                            <div class="balance-card">
+                                <span class="balance-card-label">STAKING WALLET</span>
+                                <div id="clientElxBalance" class="balance-card-val font-tech text-cyan">0.0000 <span class="unit">ELX</span></div>
+                            </div>
+                            <div class="balance-card">
+                                <span class="balance-card-label">MINING WALLET</span>
+                                <div id="clientMiningBalance" class="balance-card-val font-tech text-success">0.0000 <span class="unit">ELX</span></div>
+                            </div>
+                            <div class="profile-actions">
+                                <button id="btnMockDeposit" class="btn btn-secondary btn-sm" style="background: rgba(16, 185, 129, 0.08); border-color: var(--success); color: var(--success);">
+                                    📥 Mock Deposit
+                                </button>
+                                <button id="btnLinkWallet" class="btn btn-secondary btn-sm">
+                                    <span class="pulse-cyan"></span> Link Web3 Wallet
+                                </button>
+                                <button id="btnLogout" class="btn btn-danger-glow btn-sm">
+                                    🚪 Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Tabs Navigation -->
+                    <div class="dashboard-tabs-nav">
+                        <button id="tabBtnStaking" class="dash-tab-btn active">
+                            <span class="icon">📈</span> Staking Hub
+                        </button>
+                        <button id="tabBtnMiner" class="dash-tab-btn">
+                            <span class="icon">💻</span> Web Miner Node
+                        </button>
+                        <button id="tabBtnProfile" class="dash-tab-btn">
+                            <span class="icon">👤</span> Profile & KYC
+                        </button>
+                        <button id="tabBtnWithdraw" class="dash-tab-btn">
+                            <span class="icon">💸</span> Withdrawals
+                        </button>
+                        <button id="tabBtnSupport" class="dash-tab-btn">
+                            <span class="icon">💬</span> Support
+                        </button>
+                    </div>
+
+                    <!-- Top Row: Stats Cards (Global for Dashboard) -->
+                    <div class="stats-row-grid" style="margin-bottom: 2rem;">
+                        <div class="stat-box card-glow">
+                            <div class="stat-box-header">
+                                <span class="label">USER STAKED VALUE</span>
+                                <span class="icon">🔒</span>
+                            </div>
+                            <div id="statTotalStaked" class="stat-box-val font-tech">0.00 ELX</div>
+                            <div class="stat-box-footer text-cyan">Active principal deposits</div>
+                        </div>
+                        
+                        <div class="stat-box card-glow">
+                            <div class="stat-box-header">
+                                <span class="label">ACCRUED YIELD REWARDS</span>
+                                <span class="icon text-success">⚡</span>
+                            </div>
+                            <div id="statTotalRewards" class="stat-box-val font-tech text-success display-pulse-green">0.000000 ELX</div>
+                            <div class="stat-box-footer">Ticking rewards waiting to claim</div>
+                        </div>
+                        
+                        <div class="stat-box card-glow">
+                            <div class="stat-box-header">
+                                <span class="label">STAKING POOL TVL</span>
+                                <span class="icon">📊</span>
+                            </div>
+                            <div id="statTvl" class="stat-box-val font-tech text-cyan">2,481,920 ELX</div>
+                            <div class="stat-box-footer">Total value locked in consensus</div>
+                        </div>
+                        
+                        <div class="stat-box card-glow">
+                            <div class="stat-box-header">
+                                <span class="label">AVERAGE PORTFOLIO APY</span>
+                                <span class="icon">📈</span>
+                            </div>
+                            <div id="statApyAverage" class="stat-box-val font-tech">0.00%</div>
+                            <div class="stat-box-footer">Weighted returns speed ticker</div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB VIEW 1: STAKING HUB ==================== -->
+                    <div id="stakingHubView" class="dashboard-grid dashboard-view-panel active">
+                        
+                        <!-- Dynamic Yield Calculator Strip -->
+                        <div class="calculator-strip card-glow" style="grid-column: 1 / span 2; margin-bottom: 1rem;">
+                            <div class="strip-title-group">
+                                <span class="icon">🧮</span>
+                                <div>
+                                    <h4 class="strip-title">Staking Yield Projections</h4>
+                                    <span class="strip-subtitle">Real-time dynamic ROI estimates based on active settings</span>
+                                </div>
+                            </div>
+                            <div class="strip-metrics-group">
+                                <div class="calc-metric">
+                                    <span class="calc-label">Target APY</span>
+                                    <span id="calcApy" class="calc-val text-cyan font-tech" style="font-size: 1.35rem; font-weight: 700;">0.00%</span>
+                                </div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">Lock Period</span>
+                                    <span id="calcLock" class="calc-val font-tech" style="font-size: 1.35rem; font-weight: 700;">Flexible</span>
+                                </div>
+                                <div class="calc-metric-divider-vert"></div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">Est. Weekly Reward</span>
+                                    <span id="calcEstWeekly" class="calc-val text-success font-tech" style="font-size: 1.35rem; font-weight: 700;">+0.0000 ELX</span>
+                                </div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">Est. Monthly Reward</span>
+                                    <span id="calcEstMonthly" class="calc-val text-success font-tech" style="font-size: 1.35rem; font-weight: 700;">+0.0000 ELX</span>
+                                </div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">Est. Annual Return</span>
+                                    <span id="calcEstYearly" class="calc-val text-success font-tech" style="font-size: 1.35rem; font-weight: 700;">+0.00 ELX</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Left Panel: Deposit Stake Interface -->
+                        <div class="dashboard-left-panel">
+                            
+                            <div class="dashboard-card card-glow card-3d">
+                                <h3 class="card-title"><span class="icon">📥</span> Create Staking Position</h3>
+                                <p class="card-desc">Lock your ELX in validation pools. Select pool duration, funding source, amount, and trigger delegation.</p>
+                                
+                                <div class="deposit-form">
+                                    <!-- Pool selector -->
+                                    <div class="form-group">
+                                        <label for="poolSelect" class="form-label">Consensus Validation Pool</label>
+                                        <select id="poolSelect" class="form-select"></select>
+                                    </div>
+
+                                    <!-- Funding Source Selector -->
+                                    <div class="form-group">
+                                        <label for="stakeSourceSelect" class="form-label">Funding Source</label>
+                                        <select id="stakeSourceSelect" class="form-select">
+                                            <option value="deposit">Deposited ELX (Staking Wallet)</option>
+                                            <option value="bonus">Mined & Welcome Bonus ELX</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Amount input -->
+                                    <div class="form-group">
+                                        <div class="label-row">
+                                            <label for="stakeAmountInput" class="form-label">Stake Amount (ELX)</label>
+                                            <span id="stakeSliderVal" class="slider-percentage-display">0% Balance</span>
+                                        </div>
+                                        <div class="amount-input-wrapper">
+                                            <input type="number" id="stakeAmountInput" class="form-input text-cyan font-tech" value="100" min="0" step="10">
+                                            <span class="input-suffix">ELX</span>
+                                        </div>
+                                        <input type="range" id="stakeSlider" min="0" max="100" value="0" class="intensity-slider" style="margin-top: 0.75rem;">
+                                    </div>
+                                    
+                                    <!-- Stake button trigger -->
+                                    <button id="btnStakeNow" class="btn btn-primary btn-glow btn-full" style="margin-top: 0.5rem;">
+                                        Deposit Stake
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Right Panel: Active Stakes & Logs -->
+                        <div class="dashboard-right-panel">
+                            
+                            <!-- Table of Active Stakes -->
+                            <div class="dashboard-card card-glow" style="overflow-x: auto;">
+                                <h3 class="card-title"><span class="icon">⛓️</span> Your Active Staking Positions</h3>
+                                <table class="stakes-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Staking Pool</th>
+                                            <th>Principal</th>
+                                            <th>Funding Source</th>
+                                            <th>Lock Term</th>
+                                            <th>Accrued Yield (Live)</th>
+                                            <th style="text-align: right;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="activeStakesBody">
+                                        <tr id="noStakesRow">
+                                            <td colspan="6" class="empty-table-msg">
+                                                <div class="empty-state-visual">🔒</div>
+                                                No active staking positions. Select a pool and enter an amount above to deploy.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- User Transaction Activity Logs -->
+                            <div class="dashboard-card card-glow">
+                                <h3 class="card-title"><span class="icon">📝</span> Recent Account Log Activities</h3>
+                                <ul id="transactionHistoryList" class="transaction-history-list">
+                                    <li class="empty-log-msg">No recent activity detected.</li>
+                                </ul>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- ==================== TAB VIEW 2: WEB MINER NODE ==================== -->
+                    <div id="webMinerView" class="dashboard-grid dashboard-view-panel" style="display: none;">
+                        
+                        <!-- Validation Yield Projections Strip -->
+                        <div class="calculator-strip-interactive card-glow" style="grid-column: 1 / span 2; margin-bottom: 1rem;">
+                            <div class="strip-interactive-left">
+                                <div class="strip-title-group" style="margin-bottom: 0.5rem;">
+                                    <span class="icon">🧮</span>
+                                    <div>
+                                        <h4 class="strip-title">Validation Yield Projections</h4>
+                                        <span class="strip-subtitle">Estimate mining rewards share based on active weight parameters</span>
+                                    </div>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <div class="label-row" style="margin-bottom: 0.25rem;">
+                                        <label for="calcRangeSlider" class="form-label" style="font-size: 0.85rem;">Hold / Validation Duration</label>
+                                        <span class="slider-percentage-display" id="calcDaysVal" style="color: var(--accent-cyan); font-weight:700;">30 Days</span>
+                                    </div>
+                                    <input type="range" id="calcRangeSlider" min="1" max="365" value="30" class="intensity-slider">
+                                </div>
+                            </div>
+                            
+                            <div class="calc-metric-divider-vert"></div>
+                            
+                            <div class="strip-metrics-group">
+                                <div class="calc-metric">
+                                    <span class="calc-label">Est. Mined Yield</span>
+                                    <span id="calcResultMined" class="calc-val text-success font-tech" style="font-size: 1.35rem; font-weight: 700;">1.5000 ELX</span>
+                                </div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">% of Total Supply</span>
+                                    <span id="calcResultPercentage" class="calc-val text-cyan font-tech" style="font-size: 1.35rem; font-weight: 700;">0.000822%</span>
+                                </div>
+                                <div class="calc-metric">
+                                    <span class="calc-label">Est. Validated Shares</span>
+                                    <span id="calcResultShares" class="calc-val font-tech" style="font-size: 1.35rem; font-weight: 700;">37,500</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Left Panel: Miner Controls & Stats -->
+                        <div class="dashboard-left-panel">
+                            <div class="dashboard-card card-glow card-3d">
+                                <div class="miner-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                    <h3 class="card-title" style="margin-bottom: 0;"><span class="icon">⚙️</span> Miner Controls</h3>
+                                    <div class="miner-status-badge">
+                                        <span class="miner-status-dot" id="minerStatusDot"></span>
+                                        <span class="miner-status-text" id="minerStatusText">OFFLINE</span>
+                                    </div>
+                                </div>
+
+                                <!-- Interactive Sliders -->
+                                <div class="deposit-form">
+                                    <div class="form-group">
+                                        <div class="label-row">
+                                            <label for="threadSlider" class="form-label">CPU Threads Allocated</label>
+                                            <span class="slider-percentage-display" id="threadValDisplay">4 Threads</span>
+                                        </div>
+                                        <input type="range" id="threadSlider" min="1" max="16" value="4" class="intensity-slider">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <div class="label-row">
+                                            <label for="intensitySlider" class="form-label">Power Intensity</label>
+                                            <span class="slider-percentage-display" id="intensityValDisplay">50%</span>
+                                        </div>
+                                        <input type="range" id="intensitySlider" min="10" max="100" step="10" value="50" class="intensity-slider">
+                                    </div>
+
+                                    <!-- Start/Stop Trigger -->
+                                    <button id="toggleMiningBtn" class="btn btn-primary btn-glow btn-full" style="margin-top: 0.5rem;">
+                                        Start Browser Mining
+                                    </button>
+
+                                    <!-- Tickers & Readouts -->
+                                    <div class="miner-stats-readout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                                        <div class="readout-item" style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-titanium); display: flex; flex-direction: column;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Hashrate</span>
+                                            <span id="hashrateDisplay" style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--accent-cyan);">0.00 KH/s</span>
+                                        </div>
+                                        <div class="readout-item" style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-titanium); display: flex; flex-direction: column;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Core Temp</span>
+                                            <span id="tempDisplay" style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary);">36.2 °C</span>
+                                        </div>
+                                        <div class="readout-item" style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-titanium); display: flex; flex-direction: column;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Total Hashes</span>
+                                            <span id="hashesDisplay" style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-secondary);">0</span>
+                                        </div>
+                                        <div class="readout-item" style="background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-titanium); display: flex; flex-direction: column;">
+                                            <span style="font-size: 0.75rem; color: var(--text-muted);">Validated Shares</span>
+                                            <span id="sharesDisplay" style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--success);">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Validation Log Terminal -->
+                        <div class="dashboard-right-panel">
+                            <div class="dashboard-card card-glow" style="display: flex; flex-direction: column; flex-grow: 1; min-height: 480px;">
+                                <div class="miner-card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem;">
+                                    <h3 class="card-title" style="margin-bottom: 0;"><span class="icon">💻</span> Node Connection Logs</h3>
+                                    <span style="font-family: monospace; font-size: 0.8rem; color: var(--text-muted);">Target: 0x3bFB...56CE</span>
+                                </div>
+                                
+                                <div class="terminal-window" style="background: rgba(0,0,0,0.4); border: 1px solid var(--border-titanium); border-radius: 8px; flex-grow: 1; display: flex; flex-direction: column; overflow: hidden;">
+                                    <div class="terminal-header-decor" style="background: rgba(0,0,0,0.2); padding: 0.5rem 0.85rem; display: flex; gap: 0.4rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                        <span class="decor-dot dot-red" style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444; display: inline-block;"></span>
+                                        <span class="decor-dot dot-yellow" style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span>
+                                        <span class="decor-dot dot-green" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span>
+                                    </div>
+                                    <div class="terminal-body" id="terminalOutput" style="font-family: monospace; font-size: 0.85rem; color: #a1a1aa; padding: 1rem; height: 350px; overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 0.4rem;">
+                                        <div class="terminal-line log-muted">[SYSTEM] WebMiner node module compiled. Ready to launch validation workers.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ==================== TAB VIEW 3: PROFILE & KYC ==================== -->
+                    <div id="profileKycView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1fr;">
+                        <!-- Wallet Address Card -->
+                        <div class="dashboard-card card-glow">
+                            <h3 class="card-title"><span class="icon">🔑</span> Bind Receiving Wallet</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                Update your active BSC/ERC20 wallet address. All approved manual withdrawals will be routed to this destination.
+                            </p>
+                            <div class="form-group" style="margin-bottom: 1.25rem;">
+                                <label for="profileWalletInput" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Linked Wallet Address</label>
+                                <input type="text" id="profileWalletInput" class="form-input font-tech text-cyan" placeholder="0x...">
+                            </div>
+                            <button id="btnSaveWalletAddress" class="btn btn-primary btn-glow" style="width: 100%;">Save Address</button>
+                        </div>
+
+                        <!-- KYC Verification Card -->
+                        <div class="dashboard-card card-glow">
+                            <h3 class="card-title"><span class="icon">🛡️</span> Identity Verification (KYC)</h3>
+                            
+                            <!-- KYC State: Not Submitted -->
+                            <div id="kycStatusFormBlock">
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                    Verify your identity to unlock higher limits and premium security access. Submit a valid government ID below.
+                                </p>
+                                <form id="kycSubmitForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                                    <div class="form-group">
+                                        <label for="kycFullName" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Legal Full Name</label>
+                                        <input type="text" id="kycFullName" class="form-input text-cyan" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="kycCountry" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Country of Residence</label>
+                                        <input type="text" id="kycCountry" class="form-input text-cyan" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="kycDocType" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">ID Document Type</label>
+                                        <select id="kycDocType" class="form-input text-cyan" style="background: var(--bg-base); color: var(--text-primary); border: 1px solid var(--border-titanium); height: 42px; width: 100%; border-radius: 4px; padding: 0 0.75rem;">
+                                            <option value="Passport">Passport</option>
+                                            <option value="National ID Card">National ID Card</option>
+                                            <option value="Drivers License">Driver's License</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="kycDocId" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">ID Document Number</label>
+                                        <input type="text" id="kycDocId" class="form-input text-cyan font-tech" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-glow" style="margin-top:0.5rem;">Submit KYC Details</button>
+                                </form>
+                            </div>
+
+                            <!-- KYC State: Pending/Approved/Rejected Banner Display -->
+                            <div id="kycStatusDisplayBlock" style="display: none;">
+                                <div id="kycStatusBadge" class="badge-status" style="display: block; padding: 1rem; border-radius: 6px; font-weight: bold; text-align: center; margin-bottom: 1.25rem;"></div>
+                                <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem;">
+                                    <p style="margin-bottom: 0.5rem;"><strong style="color:var(--text-secondary);">Name:</strong> <span id="kycDispName"></span></p>
+                                    <p style="margin-bottom: 0.5rem;"><strong style="color:var(--text-secondary);">Country:</strong> <span id="kycDispCountry"></span></p>
+                                    <p style="margin-bottom: 0.5rem;"><strong style="color:var(--text-secondary);">Doc Type:</strong> <span id="kycDispDoc"></span></p>
+                                    <p><strong style="color:var(--text-secondary);">Doc Number:</strong> <span id="kycDispId" class="font-tech"></span></p>
+                                </div>
+                                <button id="btnKycResubmit" class="btn btn-secondary" style="margin-top: 1.25rem; display: none; width: 100%;">Resubmit Details</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB VIEW 4: WITHDRAWALS ==================== -->
+                    <div id="withdrawView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1.5fr;">
+                        <!-- Withdrawal Request Form -->
+                        <div class="dashboard-card card-glow">
+                            <h3 class="card-title"><span class="icon">💸</span> Request Withdrawal</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                Withdraw available profits (claimed staking yields) generated within the last 30 days. Active principal deposits are locked and cannot be withdrawn. All payouts require admin verification.
+                            </p>
+                            
+                            <div style="margin-bottom: 1.25rem; background: rgba(0,0,0,0.25); padding: 0.75rem 1rem; border-radius: 6px; border: 1px solid var(--border-titanium); display: flex; justify-content: space-between;">
+                                <span style="font-size: 0.85rem; color: var(--text-muted);">Available Balance:</span>
+                                <span id="withdrawAvailableMax" class="font-tech text-cyan" style="font-weight: 700;">0.00 ELX</span>
+                            </div>
+                            
+                            <form id="withdrawSubmitForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="withdrawWallet" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Destination Address</label>
+                                    <input type="text" id="withdrawWallet" class="form-input font-tech text-cyan" placeholder="0x..." required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="withdrawAmount" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Amount (ELX)</label>
+                                    <input type="number" id="withdrawAmount" class="form-input font-tech text-cyan" placeholder="e.g. 50" min="1" step="5" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-glow" style="margin-top:0.5rem;">Request ELX Withdrawal</button>
+                            </form>
+                        </div>
+
+                        <!-- Withdrawal History Table -->
+                        <div class="dashboard-card card-glow" style="overflow-x: auto;">
+                            <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;"><span class="icon">📝</span> Withdrawal Request Logs</h3>
+                            <table class="stakes-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Destination</th>
+                                        <th>Amount</th>
+                                        <th style="text-align: right;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="withdrawHistoryBody">
+                                    <tr>
+                                        <td colspan="4" class="empty-table-msg">
+                                            No withdrawal records found.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- ==================== TAB VIEW 5: HELP & SUPPORT ==================== -->
+                    <div id="supportView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1.5fr;">
+                        <!-- Support Form -->
+                        <div class="dashboard-card card-glow">
+                            <h3 class="card-title"><span class="icon">💬</span> Submit Help Desk Ticket</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                Contact our system support engineers. Responses will appear in your tickets list.
+                            </p>
+                            
+                            <form id="supportSubmitForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                                <div class="form-group">
+                                    <label for="ticketSubject" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Ticket Subject</label>
+                                    <input type="text" id="ticketSubject" class="form-input text-cyan" placeholder="e.g. Staking query, Deposit help" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="ticketMessage" class="form-label" style="margin-bottom:0.4rem; font-size:0.85rem;">Details / Issue Message</label>
+                                    <textarea id="ticketMessage" class="form-input text-cyan" style="min-height: 120px; font-family: inherit; font-size: 0.9rem; padding: 0.5rem 0.75rem; border: 1px solid var(--border-titanium); border-radius: 4px; background: var(--bg-base); color: var(--text-primary);" placeholder="Describe your inquiry..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-glow" style="margin-top:0.5rem;">Open Support Ticket</button>
+                            </form>
+                        </div>
+
+                        <!-- Tickets History List -->
+                        <div class="dashboard-card card-glow" style="display: flex; flex-direction: column;">
+                            <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;"><span class="icon">📨</span> Your Support Log Threads</h3>
+                            <div id="supportTicketsList" style="display: flex; flex-direction: column; gap: 1rem; max-height: 480px; overflow-y: auto; padding-right: 0.25rem;">
+                                <div class="empty-table-msg" style="text-align: center; padding: 2rem 0;">
+                                    No active support inquiries registered.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-container">
+            <div class="footer-top">
+                <div class="footer-brand" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    <a href="index.html" class="logo">
+                        <img src="logo.png" alt="ELONIX Logo" class="logo-img" width="32" height="32">
+                        <span class="logo-accent">ELONIX</span>
+                        <span class="ticker">[ELX]</span>
+                    </a>
+                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB Chain.</p>
+                </div>
+                <div class="footer-socials">
+                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="Telegram Channel">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z"/>
+                        </svg>
+                    </a>
+                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="X (Twitter) Profile">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener" aria-label="GitHub Repository">
+                        <svg viewBox="0 0 24 24" width="22" height="22">
+                            <path fill="currentColor" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+            
+            <hr class="footer-divider">
+            
+            <div class="footer-bottom">
+                <p class="disclaimer">
+                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance, and consult with certified financial advisors before participating.
+                </p>
+                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT open-source license.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- App Script -->
+    <script src="staking.js"></script>
+    <script>
+        // Set up mobile nav toggle logic for this page
+        const mobileNavToggle = document.querySelector(".mobile-nav-toggle");
+        const mobileNavOverlay = document.querySelector(".mobile-nav-overlay");
+        const mobileLinks = document.querySelectorAll(".mobile-nav-link");
+
+        if (mobileNavToggle && mobileNavOverlay) {
+            mobileNavToggle.addEventListener("click", () => {
+                mobileNavToggle.classList.toggle("active");
+                mobileNavOverlay.classList.toggle("active");
+                document.body.style.overflow = mobileNavOverlay.classList.contains("active") ? "hidden" : "auto";
+            });
+        }
+
+        if (mobileLinks && mobileNavToggle && mobileNavOverlay) {
+            mobileLinks.forEach(link => {
+                link.addEventListener("click", () => {
+                    mobileNavToggle.classList.remove("active");
+                    mobileNavOverlay.classList.remove("active");
+                    document.body.style.overflow = "auto";
+                });
+            });
+        }
+    </script>
+
+    <!-- Deposit Proof Modal -->
+    <div id="depositModal" class="modal-overlay">
+        <div class="modal-box card-glow" style="max-width: 500px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">📥</span> Submit Deposit Proof</h3>
+                <button id="closeDepositModalBtn" class="modal-close-x" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 0.5rem 0 1.25rem 0;">
+                <div class="deposit-instructions" style="margin-bottom: 1.25rem; background: rgba(0, 240, 255, 0.02); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 6px;">
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
+                        Transfer your sandbox ELX tokens from your Web3 MetaMask wallet to this platform deposit address:
+                    </p>
+                    <div class="contract-copy-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
+                         <code id="depositAddressText" class="font-tech text-cyan" style="font-size: 0.8rem; word-break: break-all;">0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b</code>
+                         <button id="btnCopyDepositAddress" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink: 0; margin-left: 0.5rem;">Copy</button>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="depAmountInput" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Transfer Amount (ELX)</label>
+                    <input type="number" id="depAmountInput" class="form-input text-cyan font-tech" placeholder="e.g. 250" min="1" step="10">
+                </div>
+                <div class="form-group">
+                    <label for="depTxHashInput" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Transaction Hash (TxID)</label>
+                    <input type="text" id="depTxHashInput" class="form-input font-tech" placeholder="0x..." style="letter-spacing: 0.5px;">
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--border-titanium); padding-top: 0.75rem;">
+                <button id="cancelDepositBtn" class="btn btn-secondary btn-sm">Cancel</button>
+                <button id="submitDepositProofBtn" class="btn btn-primary btn-glow btn-sm">Submit Deposit Proof</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
