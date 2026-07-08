@@ -12,6 +12,36 @@ const CONTRACT_ABI = [
     "function executeDailyMining() returns (bool)"
 ];
 
+// Safe localStorage wrapper to prevent crashes in private browsing or iframe sandboxes
+const safeStorage = {
+    getItem(key) {
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            console.warn("Storage access denied:", e);
+            return null;
+        }
+    },
+    setItem(key, value) {
+        try {
+            localStorage.setItem(key, value);
+            return true;
+        } catch (e) {
+            console.warn("Storage access denied:", e);
+            return false;
+        }
+    },
+    removeItem(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            console.warn("Storage access denied:", e);
+            return false;
+        }
+    }
+};
+
 // App State
 let appState = {
     connectedAddress: null,
@@ -173,26 +203,26 @@ function startLiveEmissionsTicker() {
 }
 
 function loadManualEmissionsStats() {
-    const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+    const GENESIS_TIME = Date.UTC(2026, 5, 28, 0, 0, 0); // Month is 0-indexed (5 = June)
     
-    // Check if we already have manual values in localStorage
-    let totalMined = localStorage.getItem("elonix_manual_total_mined");
-    let lastMiningTime = localStorage.getItem("elonix_manual_last_mining_time");
+    // Check if we already have manual values in storage
+    let totalMined = safeStorage.getItem("elonix_manual_total_mined");
+    let lastMiningTime = safeStorage.getItem("elonix_manual_last_mining_time");
     
-    if (totalMined === null) {
+    if (totalMined === null || totalMined === "NaN" || isNaN(parseFloat(totalMined))) {
         // Initialize default starting point (e.g. based on days since genesis to now)
         const now = Date.now();
         const daysElapsed = Math.max(0, Math.floor((now - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
         totalMined = daysElapsed * 100;
-        localStorage.setItem("elonix_manual_total_mined", totalMined.toString());
+        safeStorage.setItem("elonix_manual_total_mined", totalMined.toString());
     } else {
         totalMined = parseFloat(totalMined);
     }
     
-    if (lastMiningTime === null) {
+    if (lastMiningTime === null || lastMiningTime === "NaN" || isNaN(parseInt(lastMiningTime))) {
         // Set default last mining time to 24 hours ago
         lastMiningTime = Date.now() - 24 * 60 * 60 * 1000;
-        localStorage.setItem("elonix_manual_last_mining_time", lastMiningTime.toString());
+        safeStorage.setItem("elonix_manual_last_mining_time", lastMiningTime.toString());
     } else {
         lastMiningTime = parseInt(lastMiningTime);
     }
@@ -226,8 +256,8 @@ function triggerManualEmissionsExecution() {
     appState.totalMined += 100;
     appState.lastMiningTime = Date.now();
     
-    localStorage.setItem("elonix_manual_total_mined", appState.totalMined.toString());
-    localStorage.setItem("elonix_manual_last_mining_time", appState.lastMiningTime.toString());
+    safeStorage.setItem("elonix_manual_total_mined", appState.totalMined.toString());
+    safeStorage.setItem("elonix_manual_last_mining_time", appState.lastMiningTime.toString());
     
     updateEmissionsUI();
     
@@ -370,7 +400,7 @@ async function connectWallet() {
 // Wallet connect success state handler
 async function handleWalletConnected(address) {
     appState.connectedAddress = address;
-    localStorage.setItem("elonix_connected_wallet", address);
+    safeStorage.setItem("elonix_connected_wallet", address);
     
     // UI element updates
     const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -399,7 +429,7 @@ function disconnectWalletState() {
     appState.provider = null;
     appState.signer = null;
     appState.contractWrite = null;
-    localStorage.removeItem("elonix_connected_wallet");
+    safeStorage.removeItem("elonix_connected_wallet");
 
     if (connectWalletText) connectWalletText.innerText = "Connect Wallet";
     if (connectWalletBtn) connectWalletBtn.classList.remove("wallet-connected");
@@ -505,6 +535,12 @@ async function executeDailyMining() {
             console.error("Simulated mining execution failed:", error);
             showToast("Simulated execution failed.");
             executeMiningBtn.innerText = "Execute Daily Mining";
+            if (appState.connectedAddress) {
+                checkOwnerPrivileges(appState.connectedAddress);
+            } else {
+                executeMiningBtn.disabled = false;
+                executeMiningBtn.classList.add("btn-glow");
+            }
         }
     }
 }
@@ -539,9 +575,9 @@ function initWebMiner() {
     if (!webMinedBalance && !hashesDisplay && !sharesDisplay) return;
 
     // Load local storage values
-    const storedBalance = localStorage.getItem("elonix_mined_balance");
-    const storedHashes = localStorage.getItem("elonix_hashes_computed");
-    const storedShares = localStorage.getItem("elonix_shares_found");
+    const storedBalance = safeStorage.getItem("elonix_mined_balance");
+    const storedHashes = safeStorage.getItem("elonix_hashes_computed");
+    const storedShares = safeStorage.getItem("elonix_shares_found");
 
     if (storedBalance) appState.webMinedBalance = parseFloat(storedBalance);
     if (storedHashes) appState.hashesComputed = parseInt(storedHashes);
@@ -653,12 +689,12 @@ function startMiningSimulation() {
             const mockNonce = "0x" + Math.floor(Math.random() * 1e16).toString(16).toUpperCase();
             const diff = (2.5 + Math.random() * 8).toFixed(1);
             addTerminalLog(`[WORKER] Share accepted! Nonce: ${mockNonce} | Diff: ${diff}M`, "success");
-            localStorage.setItem("elonix_shares_found", appState.sharesFound);
+            safeStorage.setItem("elonix_shares_found", appState.sharesFound);
         }
 
         // Save progress to local storage
-        localStorage.setItem("elonix_mined_balance", appState.webMinedBalance.toString());
-        localStorage.setItem("elonix_hashes_computed", appState.hashesComputed.toString());
+        safeStorage.setItem("elonix_mined_balance", appState.webMinedBalance.toString());
+        safeStorage.setItem("elonix_hashes_computed", appState.hashesComputed.toString());
 
         // Update displays
         webMinedBalance.innerText = appState.webMinedBalance.toFixed(8);
@@ -852,7 +888,7 @@ function executeClaimFlow() {
 
         // Clear balance state
         appState.webMinedBalance = 0;
-        localStorage.setItem("elonix_mined_balance", "0");
+        safeStorage.setItem("elonix_mined_balance", "0");
         webMinedBalance.innerText = "0.00000000";
 
         modalStepProcess.classList.remove("active");
