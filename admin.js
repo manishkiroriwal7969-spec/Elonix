@@ -21,7 +21,24 @@ const DOM = {
     withdrawalsBody: document.getElementById("adminPendingWithdrawalsBody"),
     ticketsList: document.getElementById("adminSupportTicketsList"),
     
-    toast: document.getElementById("toast")
+    toast: document.getElementById("toast"),
+    
+    // KYC Audit Modal Elements
+    kycAuditModal: document.getElementById("kycAuditModal"),
+    closeKycModalBtn: document.getElementById("closeKycModalBtn"),
+    auditUsername: document.getElementById("auditUsername"),
+    auditTimestamp: document.getElementById("auditTimestamp"),
+    auditFullName: document.getElementById("auditFullName"),
+    auditDob: document.getElementById("auditDob"),
+    auditGender: document.getElementById("auditGender"),
+    auditCountry: document.getElementById("auditCountry"),
+    auditAddress: document.getElementById("auditAddress"),
+    auditDocType: document.getElementById("auditDocType"),
+    auditDocId: document.getElementById("auditDocId"),
+    auditIdFront: document.getElementById("auditIdFront"),
+    auditIdBack: document.getElementById("auditIdBack"),
+    btnRejectKyc: document.getElementById("btnRejectKyc"),
+    btnApproveKyc: document.getElementById("btnApproveKyc")
 };
 
 // Sub navigation tabs cache
@@ -31,6 +48,7 @@ let adminTabs = [];
 window.addEventListener("DOMContentLoaded", () => {
     setupAuthForm();
     setupAdminSubTabs();
+    setupKycModalListeners();
     
     if (adminSession) {
         loadAdminDashboard();
@@ -38,6 +56,23 @@ window.addEventListener("DOMContentLoaded", () => {
         showAuthScreen();
     }
 });
+
+// Setup Modal overlay and close triggers
+function setupKycModalListeners() {
+    if (DOM.closeKycModalBtn) {
+        DOM.closeKycModalBtn.addEventListener("click", () => {
+            if (DOM.kycAuditModal) DOM.kycAuditModal.classList.remove("active");
+        });
+    }
+    
+    if (DOM.kycAuditModal) {
+        DOM.kycAuditModal.addEventListener("click", (e) => {
+            if (e.target === DOM.kycAuditModal) {
+                DOM.kycAuditModal.classList.remove("active");
+            }
+        });
+    }
+}
 
 // Switch screens
 function showAuthScreen() {
@@ -248,11 +283,10 @@ function renderKycQueue() {
                 <td style="font-weight: 600;">${user.username}</td>
                 <td>${user.kyc.fullName}</td>
                 <td>${user.kyc.country}</td>
-                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${user.kyc.docType}: ${user.kyc.docId}</td>
+                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${user.kyc.docType}</td>
                 <td>
                     <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                        <button class="btn btn-row-action btn-success-glow" onclick="verifyKycAction('${username}', 'approve')">Approve</button>
-                        <button class="btn btn-row-action btn-danger-glow" onclick="verifyKycAction('${username}', 'reject')">Reject</button>
+                        <button class="btn btn-row-action btn-primary-glow" onclick="openKycAuditModal('${username}')">🔍 Audit Profile</button>
                     </div>
                 </td>
             `;
@@ -421,7 +455,57 @@ window.verifyKycAction = function(username, action) {
     saveAdminDatabase();
     
     showToast(`KYC audit complete: Status set to ${user.kyc.status} for ${user.username}.`);
+    
+    // Close modal
+    if (DOM.kycAuditModal) {
+        DOM.kycAuditModal.classList.remove("active");
+    }
+    
     renderKycQueue();
+    renderStats();
+};
+
+// 2.5 Open KYC Audit Modal with details
+window.openKycAuditModal = function(username) {
+    refreshAdminDatabase();
+    const user = usersData[username.toLowerCase()];
+    if (!user || !user.kyc) return;
+    
+    const kyc = user.kyc;
+    
+    // Fill text elements
+    if (DOM.auditUsername) DOM.auditUsername.innerText = user.username;
+    if (DOM.auditTimestamp) DOM.auditTimestamp.innerText = formatDate(new Date(kyc.timestamp || Date.now()));
+    if (DOM.auditFullName) DOM.auditFullName.innerText = kyc.fullName || "N/A";
+    if (DOM.auditDob) DOM.auditDob.innerText = kyc.dob || "Not Provided";
+    if (DOM.auditGender) DOM.auditGender.innerText = kyc.gender || "Not Provided";
+    if (DOM.auditCountry) DOM.auditCountry.innerText = kyc.country || "N/A";
+    if (DOM.auditAddress) DOM.auditAddress.innerText = kyc.address || "Not Provided";
+    if (DOM.auditDocType) DOM.auditDocType.innerText = kyc.docType || "N/A";
+    if (DOM.auditDocId) DOM.auditDocId.innerText = kyc.docId || "N/A";
+    
+    // Document Images
+    if (DOM.auditIdFront) {
+        DOM.auditIdFront.src = kyc.idFront || "logo.png";
+        DOM.auditIdFront.style.opacity = kyc.idFront ? "1" : "0.3";
+    }
+    if (DOM.auditIdBack) {
+        DOM.auditIdBack.src = kyc.idBack || "logo.png";
+        DOM.auditIdBack.style.opacity = kyc.idBack ? "1" : "0.3";
+    }
+    
+    // Bind buttons
+    if (DOM.btnApproveKyc) {
+        DOM.btnApproveKyc.onclick = () => verifyKycAction(username, 'approve');
+    }
+    if (DOM.btnRejectKyc) {
+        DOM.btnRejectKyc.onclick = () => verifyKycAction(username, 'reject');
+    }
+    
+    // Show Modal
+    if (DOM.kycAuditModal) {
+        DOM.kycAuditModal.classList.add("active");
+    }
 };
 
 // 3. Verify Withdrawal

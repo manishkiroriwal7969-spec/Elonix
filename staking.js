@@ -163,6 +163,133 @@ const UI = {
     toast: null
 };
 
+// KYC Image Upload state
+let kycFilesState = {
+    idFront: "",
+    idBack: ""
+};
+
+// Initialize KYC drop zones
+function initKycUploadZones() {
+    setupDropzone(
+        "kycFrontDropZone",
+        "kycIdFrontInput",
+        "kycFrontPreviewContainer",
+        "kycFrontPreviewImg",
+        "btnRemoveFront",
+        "idFront"
+    );
+    setupDropzone(
+        "kycBackDropZone",
+        "kycIdBackInput",
+        "kycBackPreviewContainer",
+        "kycBackPreviewImg",
+        "btnRemoveBack",
+        "idBack"
+    );
+
+    // Mock buttons logic for demo and easy testing without file pickers
+    const btnMockFront = document.getElementById("btnMockFrontKyc");
+    if (btnMockFront) {
+        btnMockFront.addEventListener("click", (e) => {
+            e.stopPropagation(); // Prevent opening native dialog
+            const mockBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAL0lEQVR42u3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvNiwAAcyqjGgAAAAASUVORK5CYII=";
+            const previewContainer = document.getElementById("kycFrontPreviewContainer");
+            const previewImg = document.getElementById("kycFrontPreviewImg");
+            if (previewContainer && previewImg) {
+                previewImg.src = mockBase64;
+                previewContainer.style.display = "block";
+                kycFilesState.idFront = mockBase64;
+                showToast("Mock Front ID loaded successfully.");
+            }
+        });
+    }
+
+    const btnMockBack = document.getElementById("btnMockBackKyc");
+    if (btnMockBack) {
+        btnMockBack.addEventListener("click", (e) => {
+            e.stopPropagation(); // Prevent opening native dialog
+            const mockBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAAL0lEQVR42u3BAQ0AAADCoPdPbQ8HFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOBvNiwAAcyqjGgAAAAASUVORK5CYII=";
+            const previewContainer = document.getElementById("kycBackPreviewContainer");
+            const previewImg = document.getElementById("kycBackPreviewImg");
+            if (previewContainer && previewImg) {
+                previewImg.src = mockBase64;
+                previewContainer.style.display = "block";
+                kycFilesState.idBack = mockBase64;
+                showToast("Mock Selfie loaded successfully.");
+            }
+        });
+    }
+}
+
+// Drag & drop file upload zone controller
+function setupDropzone(dropZoneId, fileInputId, previewContainerId, previewImgId, removeBtnId, dataKey) {
+    const dropZone = document.getElementById(dropZoneId);
+    const fileInput = document.getElementById(fileInputId);
+    const previewContainer = document.getElementById(previewContainerId);
+    const previewImg = document.getElementById(previewImgId);
+    const removeBtn = document.getElementById(removeBtnId);
+
+    if (!dropZone || !fileInput) return;
+
+    // Trigger click on file input
+    dropZone.addEventListener("click", (e) => {
+        if (e.target !== removeBtn && !removeBtn.contains(e.target)) {
+            fileInput.click();
+        }
+    });
+
+    // Dragover visual feedback
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = "var(--accent-cyan)";
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.style.borderColor = "var(--border-titanium)";
+    });
+
+    // Drop handler
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = "var(--border-titanium)";
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Input change handler
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files && e.target.files[0]) {
+            handleFile(e.target.files[0]);
+        }
+    });
+
+    // Remove file handler
+    removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        fileInput.value = "";
+        previewImg.src = "";
+        previewContainer.style.display = "none";
+        kycFilesState[dataKey] = "";
+    });
+
+    function handleFile(file) {
+        if (!file.type.startsWith("image/")) {
+            showToast("Only image files are supported.");
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            previewImg.src = event.target.result;
+            previewContainer.style.display = "block";
+            kycFilesState[dataKey] = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 // Initialize Application
 window.addEventListener("DOMContentLoaded", () => {
     cacheDOMSelectors();
@@ -173,6 +300,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setupWebMinerEventListeners();
     initGlobalMetaMaskListeners();
     initMinerEmissionsCalculator();
+    initKycUploadZones();
 
     // Check if session is already active
     if (activeSession && usersData[activeSession.username]) {
@@ -331,12 +459,18 @@ function setupDashboardTabs() {
                 // Clear active states
                 tabs.forEach(t => {
                     if (t.btn) t.btn.classList.remove("active");
-                    if (t.view) t.view.style.display = "none";
+                    if (t.view) {
+                        t.view.classList.remove("active");
+                        t.view.style.display = "none";
+                    }
                 });
                 
                 // Set active state
                 tab.btn.classList.add("active");
-                if (tab.view) tab.view.style.display = "grid";
+                if (tab.view) {
+                    tab.view.classList.add("active");
+                    tab.view.style.display = "grid";
+                }
                 window.location.hash = tab.hash;
                 
                 // Specific actions
@@ -659,12 +793,20 @@ function setupDashboardEventListeners() {
             e.preventDefault();
             if (!activeSession) return;
             const fullName = document.getElementById("kycFullName").value.trim();
+            const dob = document.getElementById("kycDob").value;
+            const gender = document.getElementById("kycGender").value;
             const country = document.getElementById("kycCountry").value.trim();
+            const address = document.getElementById("kycAddress").value.trim();
             const docType = document.getElementById("kycDocType").value;
             const docId = document.getElementById("kycDocId").value.trim();
             
-            if (!fullName || !country || !docId) {
+            if (!fullName || !dob || !gender || !country || !address || !docId) {
                 showToast("Please fill in all KYC fields.");
+                return;
+            }
+
+            if (!kycFilesState.idFront || !kycFilesState.idBack) {
+                showToast("Please upload both ID Front and Back / Selfie document images.");
                 return;
             }
             
@@ -672,9 +814,14 @@ function setupDashboardEventListeners() {
             user.kyc = {
                 status: "Pending",
                 fullName: fullName,
+                dob: dob,
+                gender: gender,
                 country: country,
+                address: address,
                 docType: docType,
                 docId: docId,
+                idFront: kycFilesState.idFront,
+                idBack: kycFilesState.idBack,
                 timestamp: Date.now()
             };
             saveUsersData();
@@ -691,6 +838,18 @@ function setupDashboardEventListeners() {
             const user = usersData[activeSession.username.toLowerCase()];
             user.kyc.status = "Not Submitted";
             saveUsersData();
+
+            // Clear current inputs and dropzone states
+            kycFilesState.idFront = "";
+            kycFilesState.idBack = "";
+            const form = document.getElementById("kycSubmitForm");
+            if (form) form.reset();
+            
+            const frontPreview = document.getElementById("kycFrontPreviewContainer");
+            if (frontPreview) frontPreview.style.display = "none";
+            const backPreview = document.getElementById("kycBackPreviewContainer");
+            if (backPreview) backPreview.style.display = "none";
+
             renderKycState(user);
         });
     }
@@ -828,11 +987,13 @@ function loadDashboard(username) {
         if (UI.tabBtnWithdraw) UI.tabBtnWithdraw.click();
     } else if (window.location.hash === "#support") {
         if (UI.tabBtnSupport) UI.tabBtnSupport.click();
+    } else if (window.location.hash === "#miner") {
+        if (UI.tabBtnMiner) UI.tabBtnMiner.click();
+    } else if (window.location.hash === "#staking") {
+        if (UI.tabBtnStaking) UI.tabBtnStaking.click();
     } else {
-        // Render current default states
-        renderKycState(user);
-        renderWithdrawalState(user);
-        renderSupportTickets(user);
+        // Default fallback to show Staking tab and clean active states
+        if (UI.tabBtnStaking) UI.tabBtnStaking.click();
     }
     
     // Check wallet link state
@@ -1847,9 +2008,23 @@ function renderKycState(user) {
         displayBlock.style.display = "block";
         
         document.getElementById("kycDispName").innerText = kyc.fullName || "";
+        document.getElementById("kycDispDob").innerText = kyc.dob || "Not Provided";
+        document.getElementById("kycDispGender").innerText = kyc.gender || "Not Provided";
         document.getElementById("kycDispCountry").innerText = kyc.country || "";
+        document.getElementById("kycDispAddress").innerText = kyc.address || "Not Provided";
         document.getElementById("kycDispDoc").innerText = kyc.docType || "";
         document.getElementById("kycDispId").innerText = kyc.docId || "";
+        
+        const frontImg = document.getElementById("kycDispIdFront");
+        if (frontImg) {
+            frontImg.src = kyc.idFront || "logo.png";
+            frontImg.style.opacity = kyc.idFront ? "1" : "0.3";
+        }
+        const backImg = document.getElementById("kycDispIdBack");
+        if (backImg) {
+            backImg.src = kyc.idBack || "logo.png";
+            backImg.style.opacity = kyc.idBack ? "1" : "0.3";
+        }
         
         badge.className = "badge-status";
         if (kyc.status === "Pending") {
