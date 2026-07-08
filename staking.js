@@ -497,32 +497,9 @@ function setupDashboardTabs() {
 }
 
 // Auth Submissions
-// Helper: SHA-256 Password Hash function using browser built-in SubtleCrypto
-async function hashPassword(string) {
-    const utf8 = new TextEncoder().encode(string);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-// Simple HTML escaping helper to prevent stored XSS
-function escapeHTML(str) {
-    if (typeof str !== 'string') return str;
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
-}
-
-// Auth Submissions
 function setupAuthSubmits() {
     if (UI.loginForm) {
-        UI.loginForm.addEventListener("submit", async (e) => {
+        UI.loginForm.addEventListener("submit", (e) => {
             e.preventDefault();
             const username = document.getElementById("loginUsername").value.trim();
             const pass = document.getElementById("loginPassword").value;
@@ -538,10 +515,9 @@ function setupAuthSubmits() {
                 return;
             }
             
-            // Secure Password Hash verification (fallback to legacy Base64 check for backward compatibility)
-            const hashedInput = await hashPassword(pass);
-            const legacyInput = btoa(pass);
-            if (user.passwordHash !== hashedInput && user.passwordHash !== legacyInput) {
+            // Simple string encryption comparison
+            const hashedInput = btoa(pass);
+            if (user.passwordHash !== hashedInput) {
                 setAuthError("Incorrect password. Please try again.");
                 return;
             }
@@ -556,7 +532,7 @@ function setupAuthSubmits() {
     }
     
     if (UI.registerForm) {
-        UI.registerForm.addEventListener("submit", async (e) => {
+        UI.registerForm.addEventListener("submit", (e) => {
             e.preventDefault();
             const username = document.getElementById("regUsername").value.trim();
             const email = document.getElementById("regEmail").value.trim();
@@ -593,13 +569,11 @@ function setupAuthSubmits() {
                 return;
             }
             
-            const securePassHash = await hashPassword(pass);
-            
             // Create user object with balance and miningBalance
             const newUser = {
-                username: escapeHTML(username),
-                email: escapeHTML(email),
-                passwordHash: securePassHash, 
+                username: username,
+                email: email,
+                passwordHash: btoa(pass), 
                 balance: 10, 
                 miningBalance: 0, 
                 hashesComputed: 0,
@@ -839,13 +813,13 @@ function setupDashboardEventListeners() {
             const user = usersData[activeSession.username.toLowerCase()];
             user.kyc = {
                 status: "Pending",
-                fullName: escapeHTML(fullName),
-                dob: escapeHTML(dob),
-                gender: escapeHTML(gender),
-                country: escapeHTML(country),
-                address: escapeHTML(address),
-                docType: escapeHTML(docType),
-                docId: escapeHTML(docId),
+                fullName: fullName,
+                dob: dob,
+                gender: gender,
+                country: country,
+                address: address,
+                docType: docType,
+                docId: docId,
                 idFront: kycFilesState.idFront,
                 idBack: kycFilesState.idBack,
                 timestamp: Date.now()
@@ -956,8 +930,8 @@ function setupDashboardEventListeners() {
             if (!user.tickets) user.tickets = [];
             
             user.tickets.push({
-                subject: escapeHTML(subject),
-                message: escapeHTML(msg),
+                subject: subject,
+                message: msg,
                 reply: null,
                 status: "Open",
                 timestamp: Date.now()
@@ -991,14 +965,6 @@ function loadDashboard(username) {
     
     // KYC & Profile Defaults migration
     if (user.walletLinked === undefined) user.walletLinked = "";
-    
-    // Auto sync wallet connection state from home page/local storage
-    const storedWallet = localStorage.getItem("elonix_connected_wallet");
-    if (!user.walletLinked && storedWallet) {
-        user.walletLinked = storedWallet;
-        saveUsersData();
-    }
-    
     if (user.kyc === undefined) user.kyc = { status: "Not Submitted", fullName: "", country: "", docType: "Passport", docId: "" };
     if (user.withdrawals === undefined) user.withdrawals = [];
     if (user.tickets === undefined) user.tickets = [];
@@ -1393,7 +1359,6 @@ function executeStakeDeposit() {
         // Rule Validation:
         // Staked bonus tokens (mined + welcome) cannot exceed deposited tokens staked,
         // UNLESS the deposited amount staked exceeds the combined value of mined & welcome bonus tokens.
-        // Or if the stake is part of the initial welcome bonus allocation (10 ELX limit).
         let totalDepositedStaked = 0;
         let totalBonusStaked = 0;
         
@@ -1410,10 +1375,7 @@ function executeStakeDeposit() {
         const combinedBonusValue = totalBonusStaked + availableBonus;
 
         // Condition check:
-        // Allow user to stake up to their welcome bonus allotment (10 ELX) unconditionally
-        if (totalBonusStaked + amount <= 10) {
-            // Under welcome bonus allotment, allow unconditionally
-        } else if (totalDepositedStaked >= combinedBonusValue) {
+        if (totalDepositedStaked >= combinedBonusValue) {
             // Deposited staked exceeds the combined bonus pool value, user can stake all bonus tokens.
         } else {
             // Otherwise, they can only stake up to the value of their deposited staked tokens.
@@ -1489,10 +1451,10 @@ window.triggerClaimRewardsFlow = function(index) {
     if (!stake) return;
     
     const pool = STAKING_POOLS[stake.poolId];
-    const calculationTime = Date.now();
+    const now = Date.now();
     
     // Calculate pending yield
-    const elapsedSec = (calculationTime - stake.lastUpdate) / 1000;
+    const elapsedSec = (now - stake.lastUpdate) / 1000;
     const tickYield = stake.amount * (pool.apy / 100) * (elapsedSec / (365 * 24 * 60 * 60));
     const totalClaimable = stake.claimedRewards + tickYield;
     
@@ -1504,16 +1466,11 @@ window.triggerClaimRewardsFlow = function(index) {
     showToast("Processing staking claim transfer...");
     
     setTimeout(() => {
-        // Fetch fresh copy from database to avoid closure state bugs
-        const userFresh = usersData[activeSession.username.toLowerCase()];
-        const stakeFresh = userFresh.stakes[index];
-        if (!stakeFresh) return;
-        
         // Yield claims always return to the available staking wallet balance
-        userFresh.balance += totalClaimable;
+        user.balance += totalClaimable;
         
         // Log transaction
-        userFresh.transactions.push({
+        user.transactions.push({
             type: "Claim Yield",
             amount: totalClaimable,
             unit: "ELX",
@@ -1521,12 +1478,12 @@ window.triggerClaimRewardsFlow = function(index) {
             desc: `Claimed yield rewards from ${pool.name} pool.`
         });
         
-        // Reset stake values, keeping the accrual that happened during the timeout
-        stakeFresh.claimedRewards = 0;
-        stakeFresh.lastUpdate = calculationTime; // Lock to the calculation time, preserving delay-period yield
+        // Reset stake values
+        stake.claimedRewards = 0;
+        stake.lastUpdate = Date.now();
         
         saveUsersData();
-        loadDashboard(userFresh.username);
+        loadDashboard(user.username);
         showToast(`Successfully claimed ${totalClaimable.toFixed(4)} ELX!`);
     }, 1000);
 };
@@ -1643,11 +1600,11 @@ async function linkMetaMaskWallet() {
             }
         }
         
+        if (accounts.length > 0) {
             const address = accounts[0];
             if (activeSession) {
                 const user = usersData[activeSession.username.toLowerCase()];
                 user.walletLinked = address;
-                localStorage.setItem("elonix_connected_wallet", address);
                 
                 user.transactions.push({
                     type: "MetaMask Linked",

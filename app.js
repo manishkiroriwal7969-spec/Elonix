@@ -12,36 +12,6 @@ const CONTRACT_ABI = [
     "function executeDailyMining() returns (bool)"
 ];
 
-// Safe localStorage wrapper to prevent crashes in private browsing or iframe sandboxes
-const safeStorage = {
-    getItem(key) {
-        try {
-            return localStorage.getItem(key);
-        } catch (e) {
-            console.warn("Storage access denied:", e);
-            return null;
-        }
-    },
-    setItem(key, value) {
-        try {
-            localStorage.setItem(key, value);
-            return true;
-        } catch (e) {
-            console.warn("Storage access denied:", e);
-            return false;
-        }
-    },
-    removeItem(key) {
-        try {
-            localStorage.removeItem(key);
-            return true;
-        } catch (e) {
-            console.warn("Storage access denied:", e);
-            return false;
-        }
-    }
-};
-
 // App State
 let appState = {
     connectedAddress: null,
@@ -140,6 +110,7 @@ window.addEventListener("DOMContentLoaded", async () => {
     initPublicData();
     initWeb3Listeners();
     setupEventListeners();
+    initWebMiner();
     init3DTilt(); // Initialize 3D cards tilt effect
     initNodeTracker(); // Node and network monitor
     initEmissionsCalculator(); // Emissions estimation tool
@@ -183,6 +154,35 @@ function setupEventListeners() {
 
     // Execute daily mining trigger
     if (executeMiningBtn) executeMiningBtn.addEventListener("click", executeDailyMining);
+
+    // Web Miner controls
+    if (threadSlider) {
+        threadSlider.addEventListener("input", handleThreadChange);
+    }
+    if (intensitySlider) {
+        intensitySlider.addEventListener("input", handleIntensityChange);
+    }
+    if (toggleMiningBtn) {
+        toggleMiningBtn.addEventListener("click", toggleWebMiner);
+    }
+    if (addTokenToMetaMaskBtn) {
+        addTokenToMetaMaskBtn.addEventListener("click", addTokenToMetaMask);
+    }
+    if (claimWebMinedBtn) {
+        claimWebMinedBtn.addEventListener("click", openClaimModal);
+    }
+    if (closeModalBtn) {
+        closeModalBtn.addEventListener("click", closeClaimModal);
+    }
+    if (cancelClaimBtn) {
+        cancelClaimBtn.addEventListener("click", closeClaimModal);
+    }
+    if (confirmClaimBtn) {
+        confirmClaimBtn.addEventListener("click", executeClaimFlow);
+    }
+    if (successCloseBtn) {
+        successCloseBtn.addEventListener("click", closeClaimModal);
+    }
 }
 
 // Fetch data using public BSC RPC (for immediate loading without wallet connect)
@@ -190,94 +190,105 @@ async function initPublicData() {
     // Only run if public stats elements are on this page
     if (!minedVal && !lockedVal && !timestampVal) return;
 
-    // Start real-time emissions ticker loop
-    startLiveEmissionsTicker();
+    // Refresh contract stats immediately
+    await refreshContractStats();
 }
 
-// Start Manual Emissions Loading
+// Start Live Emissions Tick Loop (mines exactly 100 ELX over a 24-hour cycle)
 let emissionsTickerStarted = false;
 function startLiveEmissionsTicker() {
     if (emissionsTickerStarted) return;
     emissionsTickerStarted = true;
-    loadManualEmissionsStats();
-}
 
-function loadManualEmissionsStats() {
-    const GENESIS_TIME = Date.UTC(2026, 5, 28, 0, 0, 0); // Month is 0-indexed (5 = June)
-    
-    // Check if we already have manual values in storage
-    let totalMined = safeStorage.getItem("elonix_manual_total_mined");
-    let lastMiningTime = safeStorage.getItem("elonix_manual_last_mining_time");
-    
-    if (totalMined === null || totalMined === "NaN" || isNaN(parseFloat(totalMined))) {
-        // Initialize default starting point (e.g. based on days since genesis to now)
+    const updateStats = () => {
+        // Genesis point: June 28, 2026 UTC
+        const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
         const now = Date.now();
-        const daysElapsed = Math.max(0, Math.floor((now - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
-        totalMined = daysElapsed * 100;
-        safeStorage.setItem("elonix_manual_total_mined", totalMined.toString());
-    } else {
-        totalMined = parseFloat(totalMined);
-    }
-    
-    if (lastMiningTime === null || lastMiningTime === "NaN" || isNaN(parseInt(lastMiningTime))) {
-        // Set default last mining time to 24 hours ago
-        lastMiningTime = Date.now() - 24 * 60 * 60 * 1000;
-        safeStorage.setItem("elonix_manual_last_mining_time", lastMiningTime.toString());
-    } else {
-        lastMiningTime = parseInt(lastMiningTime);
-    }
-    
-    appState.totalMined = totalMined;
-    appState.lastMiningTime = lastMiningTime;
-    
-    updateEmissionsUI();
-}
-
-function updateEmissionsUI() {
-    const maxSupply = 182500;
-    const totalMined = appState.totalMined;
-    const remainingLocked = Math.max(0, maxSupply - totalMined);
-    const percentage = (totalMined / maxSupply) * 100;
-    
-    // Update DOM elements
-    if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
-    if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
-    
-    if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
-    if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
-    
-    if (timestampVal) {
-        const lastMiningDate = new Date(appState.lastMiningTime);
-        timestampVal.innerText = formatLocalDate(lastMiningDate);
-    }
-}
-
-function triggerManualEmissionsExecution() {
-    appState.totalMined += 100;
-    appState.lastMiningTime = Date.now();
-    
-    safeStorage.setItem("elonix_manual_total_mined", appState.totalMined.toString());
-    safeStorage.setItem("elonix_manual_last_mining_time", appState.lastMiningTime.toString());
-    
-    updateEmissionsUI();
-    
-    // Flash the mined pulse indicator
-    if (minedPulse) {
-        minedPulse.classList.add("display-pulse");
-        minedPulse.style.backgroundColor = "var(--success)";
-        minedPulse.style.boxShadow = "0 0 20px var(--success)";
-        setTimeout(() => {
+        
+        // Find start of today in local time (12:00 AM)
+        const nowLocalDate = new Date();
+        const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
+        
+        // Days elapsed since genesis
+        const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
+        const baseMined = daysElapsed * 100;
+        
+        // Mined today
+        const msPassedToday = now - startOfToday;
+        const currentDayMined = Math.min(100, Math.max(0, (msPassedToday / (24 * 60 * 60 * 1000)) * 100));
+        
+        const totalMined = baseMined + currentDayMined;
+        const maxSupply = 182500;
+        const remainingLocked = Math.max(0, maxSupply - totalMined);
+        const percentage = (totalMined / maxSupply) * 100;
+        
+        // Update DOM elements
+        if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+        if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+        
+        if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+        if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+        
+        if (timestampVal) {
+            const lastMiningDate = new Date(startOfToday);
+            timestampVal.innerText = formatLocalDate(lastMiningDate);
+        }
+        
+        if (minedPulse) {
+            minedPulse.classList.add("display-pulse");
             minedPulse.style.backgroundColor = "var(--cyan)";
             minedPulse.style.boxShadow = "0 0 10px var(--cyan)";
-        }, 3000);
-    }
+        }
+    };
+    
+    updateStats();
+    setInterval(updateStats, 100);
 }
 
 // Helper to refresh data stats from the contract
 async function refreshContractStats() {
-    // Emissions display is fully governed by startLiveEmissionsTicker
-    // to show smooth live ticking of 100 ELX over 24 hours.
-    startLiveEmissionsTicker();
+    if (!ethers.isAddress(CONTRACT_ADDRESS)) {
+        applyMockupStats();
+        return;
+    }
+    try {
+        let provider;
+        if (appState.provider) {
+            provider = appState.provider;
+        } else {
+            provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
+        }
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        
+        const totalMinedWei = await contract.totalMinedTokens();
+        const lastMiningTimeSec = await contract.lastMiningTime();
+        
+        const totalMined = parseFloat(ethers.formatEther(totalMinedWei));
+        const maxSupply = 182500;
+        const remainingLocked = Math.max(0, maxSupply - totalMined);
+        const percentage = (totalMined / maxSupply) * 100;
+        
+        // Update DOM elements
+        if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+        if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+        
+        if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+        if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+        
+        if (timestampVal) {
+            const lastMiningDate = new Date(Number(lastMiningTimeSec) * 1000);
+            timestampVal.innerText = formatLocalDate(lastMiningDate);
+        }
+        
+        if (minedPulse) {
+            minedPulse.classList.add("display-pulse");
+            minedPulse.style.backgroundColor = "var(--cyan)";
+            minedPulse.style.boxShadow = "0 0 10px var(--cyan)";
+        }
+    } catch (error) {
+        console.error("Failed to fetch contract stats:", error);
+        applyMockupStats();
+    }
 }
 
 // Formatter: human readable dates
@@ -304,8 +315,43 @@ function formatNumberWithCommas(x) {
 
 // Fallback Mockup Data in case BSC RPC is entirely offline
 function applyMockupStats() {
-    // Emissions display is fully governed by startLiveEmissionsTicker
-    startLiveEmissionsTicker();
+    const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+    
+    // Find start of today in local time (12:00 AM)
+    const nowLocalDate = new Date();
+    const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
+    
+    // Days elapsed since genesis (excluding today)
+    const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
+    
+    // Check if daily execution was triggered today in mockup
+    const todayStr = nowLocalDate.toDateString();
+    const executedToday = localStorage.getItem("elonix_daily_executed_date") === todayStr;
+    
+    const totalMined = (daysElapsed * 100) + (executedToday ? 100 : 0);
+    const maxSupply = 182500;
+    const remainingLocked = Math.max(0, maxSupply - totalMined);
+    const percentage = (totalMined / maxSupply) * 100;
+    
+    if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+    if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+    
+    if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+    if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+    
+    if (timestampVal) {
+        if (executedToday) {
+            const execTime = localStorage.getItem("elonix_daily_executed_time");
+            timestampVal.innerText = formatLocalDate(new Date(parseInt(execTime || startOfToday)));
+        } else {
+            const yesterdayStart = new Date(startOfToday - 24 * 60 * 60 * 1000);
+            timestampVal.innerText = formatLocalDate(yesterdayStart);
+        }
+    }
+    
+    if (minedPulse) {
+        minedPulse.classList.remove("display-pulse");
+    }
 }
 
 // Setup listeners for Metamask injection events
@@ -400,7 +446,6 @@ async function connectWallet() {
 // Wallet connect success state handler
 async function handleWalletConnected(address) {
     appState.connectedAddress = address;
-    safeStorage.setItem("elonix_connected_wallet", address);
     
     // UI element updates
     const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -429,7 +474,6 @@ function disconnectWalletState() {
     appState.provider = null;
     appState.signer = null;
     appState.contractWrite = null;
-    safeStorage.removeItem("elonix_connected_wallet");
 
     if (connectWalletText) connectWalletText.innerText = "Connect Wallet";
     if (connectWalletBtn) connectWalletBtn.classList.remove("wallet-connected");
@@ -438,11 +482,11 @@ function disconnectWalletState() {
     if (mobileConnectWalletBtn) mobileConnectWalletBtn.classList.remove("wallet-connected");
 
     if (executeMiningBtn) {
-        executeMiningBtn.disabled = false;
-        executeMiningBtn.classList.add("btn-glow");
+        executeMiningBtn.disabled = true;
+        executeMiningBtn.classList.remove("btn-glow");
     }
     if (miningBtnTooltip) {
-        miningBtnTooltip.innerText = "Click to execute daily mining (Simulated Mode)";
+        miningBtnTooltip.innerText = "Connect wallet of contract owner to execute";
     }
 
     initPublicData(); // Fallback to public RPC data
@@ -458,89 +502,71 @@ function checkOwnerPrivileges(address) {
     if (activeAddressLower === ownerAddressLower) {
         executeMiningBtn.disabled = false;
         executeMiningBtn.classList.add("btn-glow");
-        if (miningBtnTooltip) miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release on BSC";
+        if (miningBtnTooltip) miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
     } else {
-        executeMiningBtn.disabled = false;
-        executeMiningBtn.classList.add("btn-glow");
-        if (miningBtnTooltip) miningBtnTooltip.innerText = "Simulate the daily 100 ELX emission lock release (Local Mode)";
+        executeMiningBtn.disabled = true;
+        executeMiningBtn.classList.remove("btn-glow");
+        if (miningBtnTooltip) miningBtnTooltip.innerText = `Restricted to Contract Owner only (${OWNER_ADDRESS.slice(0, 6)}...${OWNER_ADDRESS.slice(-4)})`;
     }
 }
 
-// Trigger Smart Contract emission distribution or local simulation
+// Trigger Smart Contract emission distribution
 async function executeDailyMining() {
-    const isRealOwner = appState.contractWrite && appState.connectedAddress && 
-        appState.connectedAddress.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+    if (!appState.contractWrite || !appState.connectedAddress) {
+        showToast("Wallet not connected!");
+        return;
+    }
 
-    if (isRealOwner) {
-        try {
-            executeMiningBtn.disabled = true;
-            executeMiningBtn.innerText = "Pending Signature...";
-            showToast("Confirm transaction in your wallet...");
+    try {
+        executeMiningBtn.disabled = true;
+        executeMiningBtn.innerText = "Pending Signature...";
+        showToast("Confirm transaction in your wallet...");
 
-            const tx = await appState.contractWrite.executeDailyMining();
+        const tx = await appState.contractWrite.executeDailyMining();
+        
+        executeMiningBtn.innerText = "Mining Transaction Sent...";
+        showToast(`Transaction sent! Hash: ${tx.hash.slice(0, 8)}...`);
+
+        // Wait for confirmation block
+        const receipt = await tx.wait();
+        
+        if (receipt.status === 1) {
+            showToast("Daily Mining emissions executed successfully!");
+            executeMiningBtn.innerText = "Executed Successfully";
+            setTimeout(() => {
+                executeMiningBtn.innerText = "Execute Daily Mining";
+                checkOwnerPrivileges(appState.connectedAddress);
+            }, 5000);
             
-            executeMiningBtn.innerText = "Mining Transaction Sent...";
-            showToast(`Transaction sent! Hash: ${tx.hash.slice(0, 8)}...`);
-
-            // Wait for confirmation block
-            const receipt = await tx.wait();
-            
-            if (receipt.status === 1) {
-                showToast("Daily Mining emissions executed successfully on-chain!");
-                executeMiningBtn.innerText = "Executed Successfully";
+            // Refresh stats to reflect updated total mined and timestamp
+            await refreshContractStats();
+        } else {
+            throw new Error("Transaction execution failed on chain.");
+        }
+    } catch (error) {
+        console.error("Mining execution failed:", error);
+        
+        // Mockup fallback simulation for development/testing if contract call fails
+        const todayStr = new Date().toDateString();
+        if (localStorage.getItem("elonix_daily_executed_date") !== todayStr) {
+            showToast("Simulating transaction execution locally (Mockup)...");
+            setTimeout(async () => {
+                localStorage.setItem("elonix_daily_executed_date", todayStr);
+                localStorage.setItem("elonix_daily_executed_time", Date.now().toString());
                 
-                triggerManualEmissionsExecution();
-
+                showToast("Daily Mining emissions executed successfully (Mockup)!");
+                executeMiningBtn.innerText = "Executed Successfully";
                 setTimeout(() => {
                     executeMiningBtn.innerText = "Execute Daily Mining";
                     checkOwnerPrivileges(appState.connectedAddress);
                 }, 5000);
-            } else {
-                throw new Error("Transaction execution failed on chain.");
-            }
-        } catch (error) {
-            console.error("Mining execution failed:", error);
-            showToast(error.reason || error.message || "Transaction rejected.");
+                
+                await refreshContractStats();
+            }, 2000);
+        } else {
+            showToast("Daily emission already executed for today.");
             executeMiningBtn.innerText = "Execute Daily Mining";
             checkOwnerPrivileges(appState.connectedAddress);
-        }
-    } else {
-        // Local simulation execution
-        try {
-            executeMiningBtn.disabled = true;
-            executeMiningBtn.innerText = "Processing (Simulated)...";
-            showToast("Executing daily mining protocol...");
-
-            // Simulate block confirmation time (1.5 seconds)
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            triggerManualEmissionsExecution();
-
-            showToast("Daily Mining emissions executed successfully (Simulated)!");
-            executeMiningBtn.innerText = "Executed Successfully";
-
-            setTimeout(() => {
-                executeMiningBtn.innerText = "Execute Daily Mining";
-                if (appState.connectedAddress) {
-                    checkOwnerPrivileges(appState.connectedAddress);
-                } else {
-                    executeMiningBtn.disabled = false;
-                    executeMiningBtn.classList.add("btn-glow");
-                    if (miningBtnTooltip) {
-                        miningBtnTooltip.innerText = "Click to execute daily mining (Simulated Mode)";
-                    }
-                }
-            }, 3000);
-        } catch (error) {
-            console.error("Simulated mining execution failed:", error);
-            showToast("Simulated execution failed.");
-            executeMiningBtn.innerText = "Execute Daily Mining";
-            if (appState.connectedAddress) {
-                checkOwnerPrivileges(appState.connectedAddress);
-            } else {
-                executeMiningBtn.disabled = false;
-                executeMiningBtn.classList.add("btn-glow");
-            }
         }
     }
 }
@@ -575,9 +601,9 @@ function initWebMiner() {
     if (!webMinedBalance && !hashesDisplay && !sharesDisplay) return;
 
     // Load local storage values
-    const storedBalance = safeStorage.getItem("elonix_mined_balance");
-    const storedHashes = safeStorage.getItem("elonix_hashes_computed");
-    const storedShares = safeStorage.getItem("elonix_shares_found");
+    const storedBalance = localStorage.getItem("elonix_mined_balance");
+    const storedHashes = localStorage.getItem("elonix_hashes_computed");
+    const storedShares = localStorage.getItem("elonix_shares_found");
 
     if (storedBalance) appState.webMinedBalance = parseFloat(storedBalance);
     if (storedHashes) appState.hashesComputed = parseInt(storedHashes);
@@ -689,12 +715,12 @@ function startMiningSimulation() {
             const mockNonce = "0x" + Math.floor(Math.random() * 1e16).toString(16).toUpperCase();
             const diff = (2.5 + Math.random() * 8).toFixed(1);
             addTerminalLog(`[WORKER] Share accepted! Nonce: ${mockNonce} | Diff: ${diff}M`, "success");
-            safeStorage.setItem("elonix_shares_found", appState.sharesFound);
+            localStorage.setItem("elonix_shares_found", appState.sharesFound);
         }
 
         // Save progress to local storage
-        safeStorage.setItem("elonix_mined_balance", appState.webMinedBalance.toString());
-        safeStorage.setItem("elonix_hashes_computed", appState.hashesComputed.toString());
+        localStorage.setItem("elonix_mined_balance", appState.webMinedBalance.toString());
+        localStorage.setItem("elonix_hashes_computed", appState.hashesComputed.toString());
 
         // Update displays
         webMinedBalance.innerText = appState.webMinedBalance.toFixed(8);
@@ -888,7 +914,7 @@ function executeClaimFlow() {
 
         // Clear balance state
         appState.webMinedBalance = 0;
-        safeStorage.setItem("elonix_mined_balance", "0");
+        localStorage.setItem("elonix_mined_balance", "0");
         webMinedBalance.innerText = "0.00000000";
 
         modalStepProcess.classList.remove("active");

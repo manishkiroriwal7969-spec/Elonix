@@ -144,7 +144,8 @@
                         <div class="dashboard-card card-glow" style="margin-bottom: 2rem; overflow-x: auto;">
                             <h3 class="card-title"
                                 style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                                <span class="icon">⛓️</span> Active Deposit Audits Queue</h3>
+                                <span class="icon">⛓️</span> Active Deposit Audits Queue
+                            </h3>
                             <table class="stakes-table" style="width: 100%;">
                                 <thead>
                                     <tr>
@@ -173,7 +174,8 @@
                         <div class="dashboard-card card-glow" style="margin-bottom: 2rem; overflow-x: auto;">
                             <h3 class="card-title"
                                 style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                                <span class="icon">🛡️</span> Identity Verification Audits</h3>
+                                <span class="icon">🛡️</span> Identity Verification Audits
+                            </h3>
                             <table class="stakes-table" style="width: 100%;">
                                 <thead>
                                     <tr>
@@ -202,7 +204,8 @@
                         <div class="dashboard-card card-glow" style="margin-bottom: 2rem; overflow-x: auto;">
                             <h3 class="card-title"
                                 style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                                <span class="icon">💸</span> Withdrawal Request Processing Queue</h3>
+                                <span class="icon">💸</span> Withdrawal Request Processing Queue
+                            </h3>
                             <table class="stakes-table" style="width: 100%;">
                                 <thead>
                                     <tr>
@@ -230,7 +233,8 @@
                         <div class="dashboard-card card-glow" style="margin-bottom: 2rem;">
                             <h3 class="card-title"
                                 style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                                <span class="icon">💬</span> Client Assistance Help Desk</h3>
+                                <span class="icon">💬</span> Client Assistance Help Desk
+                            </h3>
                             <div id="adminSupportTicketsList"
                                 style="display: flex; flex-direction: column; gap: 1.5rem;">
                                 <div class="empty-table-msg" style="text-align: center; padding: 2rem 0;">
@@ -252,30 +256,39 @@
 
     <!-- KYC Audit Detail Modal -->
     <div id="kycAuditModal" class="modal-overlay">
-        <div class="modal-card card-glow" style="max-width: 600px; background: var(--bg-surface); border: 1px solid var(--border-titanium-hover); border-radius: 12px;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
-                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">🛡️</span> Auditing Identity Verification Profile</h3>
-                <button id="closeKycModalBtn" class="modal-close-x" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
+        <div class="modal-card card-glow"
+            style="max-width: 600px; background: var(--bg-surface); border: 1px solid var(--border-titanium-hover); border-radius: 12px;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">🛡️</span>
+                    Auditing Identity Verification Profile</h3>
+                <button id="closeKycModalBtn" class="modal-close-x"
+                    style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
-            
-            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1rem; color: var(--text-primary); padding: 0.5rem 0;">
-                
+
+            <div class="modal-body"
+                style="display: flex; flex-direction: column; gap: 1rem; color: var(--text-primary); padding: 0.5rem 0;">
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">CLIENT USERNAME</span>
-                        <span id="auditUsername" class="font-tech text-cyan" style="font-weight: 700; font-size: 1.1rem;">username</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">CLIENT
+                            USERNAME</span>
+                        <span id="auditUsername" class="font-tech text-cyan"
+                            style="font-weight: 700; font-size: 1.1rem;">username</span>
                     </div>
                     <div>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">SUBMISSION TIMESTAMP</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">SUBMISSION
+                            TIMESTAMP</span>
                         <span id="auditTimestamp" style="font-size: 0.9rem;">Date / Time</span>
                     </div>
                 </div>
-                
+
                 <hr style="border: none; border-top: 1px solid var(--border-titanium); margin: 0.25rem 0;">
-                
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                     <div>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">LEGAL FULL NAME</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">LEGAL FULL
+                            NAME</span>
                         <span id="auditFullName" style="font-weight: 600;">Full Legal Name</span>
                     </div>
                     <div>
@@ -290,50 +303,70 @@
                         <span id="auditGender">Gender</span>
                     </div>
                     <div>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">COUNTRY OF RESIDENCE</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">COUNTRY OF
+                            RESIDENCE</span>
                         <span id="auditCountry">Country</span>
                     </div>
                 </div>
 
                 <div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">RESIDENTIAL ADDRESS</span>
-                    <span id="auditAddress" style="font-size: 0.9rem; color: var(--text-secondary);">123 Main Street, Country</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">RESIDENTIAL
+                        ADDRESS</span>
+                    <span id="auditAddress" style="font-size: 0.9rem; color: var(--text-secondary);">123 Main Street,
+                        Country</span>
                 </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+
+                <div
+                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
                     <div>
                         <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">DOCUMENT TYPE</span>
                         <span id="auditDocType" style="font-weight: 600;">Passport</span>
                     </div>
                     <div>
-                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">DOCUMENT NUMBER</span>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">DOCUMENT
+                            NUMBER</span>
                         <span id="auditDocId" class="font-tech text-cyan" style="font-weight: 600;">AB1234567</span>
                     </div>
                 </div>
 
                 <div>
-                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">SUBMITTED DOCUMENT IMAGES</span>
+                    <span
+                        style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">SUBMITTED
+                        DOCUMENT IMAGES</span>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div style="text-align: center;">
-                            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">FRONT SIDE</span>
-                            <div style="border: 1px solid var(--border-titanium); border-radius: 4px; padding: 0.25rem; background: rgba(0,0,0,0.3); overflow: hidden;">
-                                <img id="auditIdFront" src="" style="max-width: 100%; max-height: 150px; cursor: pointer; transition: transform 0.2s;" onclick="window.open(this.src)">
+                            <span
+                                style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">FRONT
+                                SIDE</span>
+                            <div
+                                style="border: 1px solid var(--border-titanium); border-radius: 4px; padding: 0.25rem; background: rgba(0,0,0,0.3); overflow: hidden;">
+                                <img id="auditIdFront" src=""
+                                    style="max-width: 100%; max-height: 150px; cursor: pointer; transition: transform 0.2s;"
+                                    onclick="window.open(this.src)">
                             </div>
                         </div>
                         <div style="text-align: center;">
-                            <span style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">BACK SIDE / SELFIE</span>
-                            <div style="border: 1px solid var(--border-titanium); border-radius: 4px; padding: 0.25rem; background: rgba(0,0,0,0.3); overflow: hidden;">
-                                <img id="auditIdBack" src="" style="max-width: 100%; max-height: 150px; cursor: pointer; transition: transform 0.2s;" onclick="window.open(this.src)">
+                            <span
+                                style="font-size: 0.7rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">BACK
+                                SIDE / SELFIE</span>
+                            <div
+                                style="border: 1px solid var(--border-titanium); border-radius: 4px; padding: 0.25rem; background: rgba(0,0,0,0.3); overflow: hidden;">
+                                <img id="auditIdBack" src=""
+                                    style="max-width: 100%; max-height: 150px; cursor: pointer; transition: transform 0.2s;"
+                                    onclick="window.open(this.src)">
                             </div>
                         </div>
                     </div>
                 </div>
 
             </div>
-            
-            <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-titanium); padding-top: 1rem; margin-top: 1rem;">
-                <button id="btnRejectKyc" class="btn btn-danger-glow btn-sm" style="min-width: 120px;">❌ Reject Profile</button>
-                <button id="btnApproveKyc" class="btn btn-success-glow btn-sm" style="min-width: 120px;">✅ Verify / Approve</button>
+
+            <div class="modal-footer"
+                style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-titanium); padding-top: 1rem; margin-top: 1rem;">
+                <button id="btnRejectKyc" class="btn btn-danger-glow btn-sm" style="min-width: 120px;">❌ Reject
+                    Profile</button>
+                <button id="btnApproveKyc" class="btn btn-success-glow btn-sm" style="min-width: 120px;">✅ Verify /
+                    Approve</button>
             </div>
         </div>
     </div>
