@@ -1,5 +1,5 @@
 // contract configuration
-const CONTRACT_ADDRESS = "0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b";
+const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";
 const BSC_CHAIN_ID = "0x38"; // 56 in decimal
 const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";

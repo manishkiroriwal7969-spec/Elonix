@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About | ELONIX (ELX) Protocol</title>
-    <meta name="description" content="Learn about the mathematical blueprints of ELONIX DeFi mining and the autonomous emission protocol.">
-    
+    <meta name="description"
+        content="Learn about the mathematical blueprints of ELONIX DeFi mining and the autonomous emission protocol.">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
-    
+
     <!-- Ethers.js Browser CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 </head>
+
 <body class="page-entrance">
     <!-- Toast Notification -->
     <div id="toast" class="toast-notification" role="alert" aria-live="assertive">Address Copied!</div>
@@ -34,7 +39,7 @@
                 <span class="logo-accent">ELONIX</span>
                 <span class="ticker">[ELX]</span>
             </a>
-            
+
             <nav class="nav" aria-label="Main Navigation">
                 <ul class="nav-list">
                     <li><a href="about.html" class="nav-link nav-link-active">About</a></li>
@@ -45,7 +50,7 @@
                     <li><a href="staking.html" class="nav-link">Staking</a></li>
                 </ul>
             </nav>
-            
+
             <div class="header-actions">
                 <button id="connectWalletBtn" class="btn btn-wallet btn-glow">
                     <span class="wallet-indicator"></span>
@@ -70,7 +75,8 @@
             <li><a href="roadmap.html" class="mobile-nav-link">Roadmap</a></li>
             <li><a href="staking.html" class="mobile-nav-link">Staking</a></li>
             <li>
-                <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow" style="margin-top: 2rem; width: 100%;">
+                <button id="mobileConnectWalletBtn" class="btn btn-wallet btn-glow"
+                    style="margin-top: 2rem; width: 100%;">
                     <span class="wallet-indicator"></span>
                     <span id="mobileConnectWalletText">Connect Wallet</span>
                 </button>
@@ -80,31 +86,42 @@
 
     <main style="padding-top: 8rem; min-height: calc(100vh - 300px);">
         <!-- About section -->
-        <section id="about" class="about-section" style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
+        <section id="about" class="about-section"
+            style="border: none; background: transparent; padding: 2rem 0 6rem 0;">
             <div class="container">
                 <div class="about-grid">
                     <div class="about-content">
                         <span class="section-tag">Protocol Overview</span>
-                        <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">The Blueprint of <span class="gradient-text">Hyper-Scarcity</span></h1>
+                        <h1 class="section-title" style="font-size: 3rem; line-height: 1.1; margin-bottom: 1.5rem;">The
+                            Blueprint of <span class="gradient-text">Hyper-Scarcity</span></h1>
                         <p class="about-para">
-                            ELONIX reimagines supply-side economics in decentralized finance. By hardcoding an absolute cap of just 182,500 tokens, ELX stands as one of the most hyper-scarce assets on the BNB Smart Chain network.
+                            ELONIX reimagines supply-side economics in decentralized finance. By hardcoding an absolute
+                            cap of just 182,500 tokens, ELX stands as one of the most hyper-scarce assets on the BNB
+                            Smart Chain network.
                         </p>
                         <p class="about-para">
-                            The emission protocol is simple, transparent, and completely automated. At deployment, 100% of the token supply was locked directly inside the smart contract code. Everyday, exactly 100 ELX tokens are unlocked and distributed to the mining wallet. This daily emission occurs exactly once every 24 hours over a strict 5-year cycle (1,825 days).
+                            The emission protocol is simple, transparent, and completely automated. At deployment, 100%
+                            of the token supply was locked directly inside the smart contract code. Everyday, exactly
+                            100 ELX tokens are unlocked and distributed to the mining wallet. This daily emission occurs
+                            exactly once every 24 hours over a strict 5-year cycle (1,825 days).
                         </p>
                         <p class="about-para">
-                            With zero transaction taxes, zero minting functions, and no capabilities for code upgrades or blacklisting, ELONIX sets the gold standard for trustless, mathematical decentralized design.
+                            With zero transaction taxes, zero minting functions, and no capabilities for code upgrades
+                            or blacklisting, ELONIX sets the gold standard for trustless, mathematical decentralized
+                            design.
                         </p>
                         <div style="margin-top: 2rem;">
                             <a href="webminer.html" class="btn btn-primary btn-glow">Launch Web Miner</a>
-                            <a href="mining.html" class="btn btn-secondary" style="margin-left: 1rem;">View Live Dashboard</a>
+                            <a href="mining.html" class="btn btn-secondary" style="margin-left: 1rem;">View Live
+                                Dashboard</a>
                         </div>
                     </div>
-                    
+
                     <div class="about-graphic">
                         <div class="graphic-card card-glow card-3d">
                             <!-- Interactive 3D holographic cylinder visualization -->
-                            <div class="hologram-3d-visual" style="height: 160px; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 1.5rem;">
+                            <div class="hologram-3d-visual"
+                                style="height: 160px; display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 1.5rem;">
                                 <div class="cylinder-3d-node">
                                     <span class="cylinder-side side-front">ELX</span>
                                     <span class="cylinder-side side-back">100% LOCK</span>
@@ -112,7 +129,7 @@
                                     <span class="cylinder-side side-right">IMMUTABLE</span>
                                 </div>
                             </div>
-                            
+
                             <div class="graphic-header" style="margin-bottom: 1.5rem;">
                                 <div class="pulse-cyan"></div>
                                 <span class="graphic-title">Immutable Genesis Rules</span>
@@ -156,34 +173,46 @@
                         <span class="logo-accent">ELONIX</span>
                         <span class="ticker">[ELX]</span>
                     </a>
-                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB Chain.</p>
+                    <p class="footer-desc">An immutable hyper-scarce DeFi automated daily emission framework on the BNB
+                        Chain.</p>
                 </div>
                 <div class="footer-socials">
-                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="Telegram Channel">
+                    <a href="https://t.me/elonix_token" class="social-link" target="_blank" rel="noopener"
+                        aria-label="Telegram Channel">
                         <svg viewBox="0 0 24 24" width="22" height="22">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z"/>
+                            <path fill="currentColor"
+                                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.62.15-.15 2.7-2.46 2.75-2.67.01-.03.01-.15-.06-.21-.07-.06-.17-.04-.25-.02-.11.02-1.78 1.13-5.03 3.33-.48.33-.91.49-1.3.48-.43-.01-1.26-.24-1.88-.45-.76-.25-1.37-.39-1.32-.83.03-.23.35-.46.97-.71 3.79-1.65 6.32-2.73 7.59-3.25 3.61-1.48 4.36-1.74 4.85-1.75.11 0 .35.03.5.16.13.12.17.29.19.41z" />
                         </svg>
                     </a>
-                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener" aria-label="X (Twitter) Profile">
+                    <a href="https://x.com/elonix_token" class="social-link" target="_blank" rel="noopener"
+                        aria-label="X (Twitter) Profile">
                         <svg viewBox="0 0 24 24" width="22" height="22">
-                            <path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            <path fill="currentColor"
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                         </svg>
                     </a>
-                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener" aria-label="GitHub Repository">
+                    <a href="https://github.com/elonix-token" class="social-link" target="_blank" rel="noopener"
+                        aria-label="GitHub Repository">
                         <svg viewBox="0 0 24 24" width="22" height="22">
-                            <path fill="currentColor" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z"/>
+                            <path fill="currentColor"
+                                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482C19.138 20.193 22 16.44 22 12.017 22 6.484 17.522 2 12 2z" />
                         </svg>
                     </a>
                 </div>
             </div>
-            
+
             <hr class="footer-divider">
-            
+
             <div class="footer-bottom">
                 <p class="disclaimer">
-                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance, and consult with certified financial advisors before participating.
+                    <strong>RISK DISCLAIMER:</strong> Cryptocurrencies, DeFi tokens, and digital assets are subject to
+                    extremely high market volatility, economic factors, and technical changes. ELONIX (ELX) is an
+                    autonomous software utility protocol. Trading or purchasing cryptocurrencies involves severe
+                    financial risks. Make sure to conduct your own comprehensive research, evaluate your risk tolerance,
+                    and consult with certified financial advisors before participating.
                 </p>
-                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT open-source license.</p>
+                <p class="copyright">&copy; 2026 ELONIX Protocol. All Rights Reserved. Released under the MIT
+                    open-source license.</p>
             </div>
         </div>
     </footer>
@@ -191,4 +220,5 @@
     <!-- Script -->
     <script src="app.js?v=2"></script>
 </body>
+
 </html>

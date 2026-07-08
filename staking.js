@@ -1,7 +1,7 @@
 // ELONIX Staking Program & Client Panel Logic (Integrated with Web Miner)
 
 // Contract & Public Stats configuration
-const CONTRACT_ADDRESS = "0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b";
+const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const BSC_CHAIN_ID = "0x38";
 const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
 
@@ -706,7 +706,7 @@ function setupDashboardEventListeners() {
     
     if (btnCopyDepositAddress) {
         btnCopyDepositAddress.addEventListener("click", () => {
-            navigator.clipboard.writeText("0x00a013e494c9cdd1c0ed7e8c56eb7a9442e3b")
+            navigator.clipboard.writeText("0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE")
                 .then(() => showToast("Deposit contract address copied!"))
                 .catch(() => showToast("Failed to copy address."));
         });
