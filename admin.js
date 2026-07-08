@@ -87,10 +87,32 @@ function showDashboardScreen() {
     if (DOM.logoutBtn) DOM.logoutBtn.style.display = "block";
 }
 
+// Helper: SHA-256 Password Hash function using browser built-in SubtleCrypto
+async function hashPassword(string) {
+    const utf8 = new TextEncoder().encode(string);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', utf8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Escaping helper for rendering to prevent Stored XSS vulnerabilities
+function escapeHTML(str) {
+    if (typeof str !== 'string') return str;
+    return str.replace(/[&<>'"]/g, 
+        tag => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            "'": '&#39;',
+            '"': '&quot;'
+        }[tag] || tag)
+    );
+}
+
 // Authentication
 function setupAuthForm() {
     if (DOM.loginForm) {
-        DOM.loginForm.addEventListener("submit", (e) => {
+        DOM.loginForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const username = document.getElementById("adminUsername").value.trim();
             const pass = document.getElementById("adminPassword").value;
@@ -100,8 +122,11 @@ function setupAuthForm() {
                 return;
             }
             
-            // Hardcoded Administrator credentials
-            if (username.toLowerCase() === "admin" && pass === "admin123") {
+            // Hardcoded Administrator credentials verified via SHA-256 (hash of admin123 is 240be518...)
+            const targetHash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9";
+            const hashedInput = await hashPassword(pass);
+            
+            if (username.toLowerCase() === "admin" && hashedInput === targetHash) {
                 adminSession = { username: "Administrator", loginTime: Date.now() };
                 localStorage.setItem("elonix_admin_session", JSON.stringify(adminSession));
                 DOM.loginForm.reset();
@@ -233,14 +258,14 @@ function renderPendingDeposits() {
                     
                     row.innerHTML = `
                         <td>${dateStr}</td>
-                        <td style="font-weight: 600;">${user.username}</td>
+                        <td style="font-weight: 600;">${escapeHTML(user.username)}</td>
                         <td class="font-tech text-cyan" style="font-weight:700;">${tx.amount.toFixed(2)} ELX</td>
-                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${tx.txHash.slice(0, 16)}...</td>
+                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHTML(tx.txHash.slice(0, 16))}...</td>
                         <td><span class="badge-status claimable" style="background: rgba(245, 158, 11, 0.08); border-color: rgba(245, 158, 11, 0.2); color: #f59e0b;">Pending</span></td>
                         <td>
                             <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                                <button class="btn btn-row-action btn-success-glow" onclick="verifyDepositAction('${username}', ${txIndex}, 'approve')">Approve</button>
-                                <button class="btn btn-row-action btn-danger-glow" onclick="verifyDepositAction('${username}', ${txIndex}, 'reject')">Reject</button>
+                                <button class="btn btn-row-action btn-success-glow" onclick="verifyDepositAction('${escapeHTML(username)}', ${txIndex}, 'approve')">Approve</button>
+                                <button class="btn btn-row-action btn-danger-glow" onclick="verifyDepositAction('${escapeHTML(username)}', ${txIndex}, 'reject')">Reject</button>
                             </div>
                         </td>
                     `;
@@ -280,13 +305,13 @@ function renderKycQueue() {
             
             row.innerHTML = `
                 <td>${dateStr}</td>
-                <td style="font-weight: 600;">${user.username}</td>
-                <td>${user.kyc.fullName}</td>
-                <td>${user.kyc.country}</td>
-                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${user.kyc.docType}</td>
+                <td style="font-weight: 600;">${escapeHTML(user.username)}</td>
+                <td>${escapeHTML(user.kyc.fullName)}</td>
+                <td>${escapeHTML(user.kyc.country)}</td>
+                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHTML(user.kyc.docType)}</td>
                 <td>
                     <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                        <button class="btn btn-row-action btn-primary-glow" onclick="openKycAuditModal('${username}')">🔍 Audit Profile</button>
+                        <button class="btn btn-row-action btn-primary-glow" onclick="openKycAuditModal('${escapeHTML(username)}')">🔍 Audit Profile</button>
                     </div>
                 </td>
             `;
@@ -326,13 +351,13 @@ function renderWithdrawalsQueue() {
                     
                     row.innerHTML = `
                         <td>${dateStr}</td>
-                        <td style="font-weight: 600;">${user.username}</td>
+                        <td style="font-weight: 600;">${escapeHTML(user.username)}</td>
                         <td class="font-tech text-cyan" style="font-weight:700;">${w.amount.toFixed(2)} ELX</td>
-                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${w.address}</td>
+                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHTML(w.address)}</td>
                         <td>
                             <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
-                                <button class="btn btn-row-action btn-success-glow" onclick="verifyWithdrawalAction('${username}', ${wIndex}, 'approve')">Approve</button>
-                                <button class="btn btn-row-action btn-danger-glow" onclick="verifyWithdrawalAction('${username}', ${wIndex}, 'reject')">Reject</button>
+                                <button class="btn btn-row-action btn-success-glow" onclick="verifyWithdrawalAction('${escapeHTML(username)}', ${wIndex}, 'approve')">Approve</button>
+                                <button class="btn btn-row-action btn-danger-glow" onclick="verifyWithdrawalAction('${escapeHTML(username)}', ${wIndex}, 'reject')">Reject</button>
                             </div>
                         </td>
                     `;
@@ -383,18 +408,18 @@ function renderSupportTicketsQueue() {
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.5rem;">
                             <div>
-                                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 0.5rem;">Client: ${user.username}</span>
-                                <strong style="font-size: 1rem; color: var(--text-primary);">${t.subject}</strong>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 0.5rem;">Client: ${escapeHTML(user.username)}</span>
+                                <strong style="font-size: 1rem; color: var(--text-primary);">${escapeHTML(t.subject)}</strong>
                             </div>
                             <span style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
-                            ${t.message}
+                            ${escapeHTML(t.message)}
                         </p>
                         <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                            <textarea id="reply_${username}_${tIndex}" class="form-input text-cyan" style="min-height: 60px; font-family: inherit; font-size: 0.85rem; padding: 0.4rem 0.6rem;" placeholder="Type support response message..."></textarea>
+                            <textarea id="reply_${escapeHTML(username)}_${tIndex}" class="form-input text-cyan" style="min-height: 60px; font-family: inherit; font-size: 0.85rem; padding: 0.4rem 0.6rem;" placeholder="Type support response message..."></textarea>
                             <div style="display: flex; justify-content: flex-end;">
-                                <button class="btn btn-primary btn-sm btn-glow" onclick="replySupportTicketAction('${username}', ${tIndex})">Send Response & Resolve</button>
+                                <button class="btn btn-primary btn-sm btn-glow" onclick="replySupportTicketAction('${escapeHTML(username)}', ${tIndex})">Send Response & Resolve</button>
                             </div>
                         </div>
                     `;
@@ -555,18 +580,18 @@ window.replySupportTicketAction = function(username, tIndex) {
     const user = usersData[username.toLowerCase()];
     if (!user || !user.tickets || !user.tickets[tIndex]) return;
     
-    const replyText = document.getElementById(`reply_${username}_${tIndex}`).value.trim();
+    const replyText = document.getElementById(`reply_${escapeHTML(username)}_${tIndex}`).value.trim();
     if (!replyText) {
         showToast("Please enter a response message.");
         return;
     }
     
     const t = user.tickets[tIndex];
-    t.reply = replyText;
+    t.reply = escapeHTML(replyText);
     t.status = "Resolved";
     saveAdminDatabase();
     
-    showToast(`Reply transmitted! Ticket from ${user.username} resolved.`);
+    showToast(`Reply transmitted! Ticket from ${escapeHTML(user.username)} resolved.`);
     renderSupportTicketsQueue();
 };
 
