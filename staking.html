@@ -97,6 +97,22 @@
                         <span>Gas Matrix:</span>
                         <span class="status-item-val" id="nodeGasVal">3.12 Gwei</span>
                     </div>
+                    <div class="status-item">
+                        <span>Active Peers:</span>
+                        <span class="status-item-val text-cyan" id="nodePeersVal">18 Peers</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Consensus Epoch:</span>
+                        <span class="status-item-val" id="nodeEpochVal">#810</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Block Time:</span>
+                        <span class="status-item-val" style="color: var(--accent-cyan);">3.0s</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Network TPS:</span>
+                        <span class="status-item-val" id="nodeTpsVal">12.4 tps</span>
+                    </div>
                 </div>
 
                 <!-- ==================== AUTHENTICATION WRAPPER ==================== -->
@@ -499,7 +515,7 @@
                     </div>
 
                     <!-- ==================== TAB VIEW 3: PROFILE & KYC ==================== -->
-                    <div id="profileKycView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1fr;">
+                    <div id="profileKycView" class="dashboard-grid dashboard-view-panel grid-2col" style="display: none;">
                         <!-- Wallet Address Card -->
                         <div class="dashboard-card card-glow">
                             <h3 class="card-title"><span class="icon">🔑</span> Bind Receiving Wallet</h3>
@@ -636,7 +652,7 @@
                     </div>
 
                     <!-- ==================== TAB VIEW 4: WITHDRAWALS ==================== -->
-                    <div id="withdrawView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1.5fr;">
+                    <div id="withdrawView" class="dashboard-grid dashboard-view-panel grid-1-5col" style="display: none;">
                         <!-- Withdrawal Request Form -->
                         <div class="dashboard-card card-glow">
                             <h3 class="card-title"><span class="icon">💸</span> Request Withdrawal</h3>
@@ -686,7 +702,7 @@
                     </div>
 
                     <!-- ==================== TAB VIEW 5: HELP & SUPPORT ==================== -->
-                    <div id="supportView" class="dashboard-grid dashboard-view-panel" style="display: none; grid-template-columns: 1fr 1.5fr;">
+                    <div id="supportView" class="dashboard-grid dashboard-view-panel grid-1-5col" style="display: none;">
                         <!-- Support Form -->
                         <div class="dashboard-card card-glow">
                             <h3 class="card-title"><span class="icon">💬</span> Submit Help Desk Ticket</h3>

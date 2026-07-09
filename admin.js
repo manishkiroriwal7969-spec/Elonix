@@ -49,6 +49,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setupAuthForm();
     setupAdminSubTabs();
     setupKycModalListeners();
+    initCrmActionListeners();
     
     if (adminSession) {
         loadAdminDashboard();
@@ -147,7 +148,9 @@ function setupAdminSubTabs() {
         { btn: document.getElementById("adminTabBtnDeposits"), view: document.getElementById("adminViewDeposits"), renderer: renderPendingDeposits },
         { btn: document.getElementById("adminTabBtnKyc"), view: document.getElementById("adminViewKyc"), renderer: renderKycQueue },
         { btn: document.getElementById("adminTabBtnWithdrawals"), view: document.getElementById("adminViewWithdrawals"), renderer: renderWithdrawalsQueue },
-        { btn: document.getElementById("adminTabBtnSupport"), view: document.getElementById("adminViewSupport"), renderer: renderSupportTicketsQueue }
+        { btn: document.getElementById("adminTabBtnSupport"), view: document.getElementById("adminViewSupport"), renderer: renderSupportTicketsQueue },
+        { btn: document.getElementById("adminTabBtnMining"), view: document.getElementById("adminViewMining"), renderer: initAdminMiningTab },
+        { btn: document.getElementById("adminTabBtnClients"), view: document.getElementById("adminViewClients"), renderer: renderClientsDirectory }
     ];
 
     adminTabs.forEach(tab => {
@@ -586,4 +589,697 @@ function showToast(message) {
     window.adminToastTimeout = setTimeout(() => {
         DOM.toast.classList.remove("show");
     }, 3500);
+}
+
+// ----------------------------------------------------
+// WEB3 ADMIN DAILY EMISSIONS MINING CONFIG
+// ----------------------------------------------------
+const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
+const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";
+const CONTRACT_ABI = [
+    "function totalMinedTokens() view returns (uint256)",
+    "function lastMiningTime() view returns (uint256)",
+    "function owner() view returns (address)",
+    "function executeDailyMining() returns (bool)"
+];
+
+let adminWeb3State = {
+    provider: null,
+    signer: null,
+    connectedAddress: null,
+    contractWrite: null
+};
+
+let adminMiningListenersBound = false;
+function initAdminMiningTab() {
+    const connectBtn = document.getElementById("adminConnectWalletBtn");
+    const executeBtn = document.getElementById("adminExecuteMiningBtn");
+    const statusText = document.getElementById("adminMiningStatus");
+    
+    if (!connectBtn || !executeBtn || !statusText) return;
+    
+    updateAdminWalletUI();
+
+    if (adminMiningListenersBound) return;
+    adminMiningListenersBound = true;
+    
+    connectBtn.addEventListener("click", async () => {
+        if (typeof window.ethereum === 'undefined') {
+            const confirmSimulate = confirm("No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?");
+            if (confirmSimulate) {
+                simulateAdminWalletConnection();
+            } else {
+                showToast("Please install MetaMask!");
+            }
+            return;
+        }
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (accounts.length > 0) {
+                await handleAdminWalletConnected(accounts[0]);
+            }
+        } catch (err) {
+            console.error("Wallet connection failed:", err);
+            const confirmSimulate = confirm("Wallet connection rejected. Would you like to connect in simulated Admin mode for testing?");
+            if (confirmSimulate) {
+                simulateAdminWalletConnection();
+            } else {
+                showToast("Connection rejected!");
+            }
+        }
+    });
+
+    executeBtn.addEventListener("click", async () => {
+        if (!adminWeb3State.contractWrite || !adminWeb3State.connectedAddress) {
+            showToast("Admin wallet not connected!");
+            return;
+        }
+        try {
+            executeBtn.disabled = true;
+            executeBtn.innerText = "Pending Signature...";
+            statusText.innerText = "Confirm transaction in MetaMask...";
+            statusText.style.color = "var(--accent-cyan)";
+            
+            const tx = await adminWeb3State.contractWrite.executeDailyMining();
+            
+            executeBtn.innerText = "Mining Tx Sent...";
+            statusText.innerText = `Transaction broadcasted. Tx Hash: ${tx.hash.slice(0, 10)}...`;
+            showToast("Emissions transaction sent!");
+            
+            const receipt = await tx.wait();
+            if (receipt.status === 1) {
+                showToast("Mining emissions triggered successfully!");
+                executeBtn.innerText = "Execution Successful";
+                statusText.innerText = "Daily emissions executed successfully.";
+                statusText.style.color = "var(--success)";
+                localStorage.setItem("elonix_daily_executed_date", new Date().toDateString());
+                localStorage.setItem("elonix_daily_executed_time", String(Date.now()));
+            } else {
+                throw new Error("Execution failed on chain.");
+            }
+        } catch (err) {
+            console.error("Mining tx failed:", err);
+            showToast("Execution failed!");
+            executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+            executeBtn.disabled = false;
+            statusText.innerText = `Transaction failed: ${err.message || err}`;
+            statusText.style.color = "var(--danger)";
+        }
+    });
+
+    // Detect MetaMask account changes
+    if (typeof window.ethereum !== 'undefined') {
+        window.ethereum.on('accountsChanged', (accounts) => {
+            if (accounts.length === 0) {
+                adminWeb3State.connectedAddress = null;
+                adminWeb3State.contractWrite = null;
+                updateAdminWalletUI();
+            } else {
+                handleAdminWalletConnected(accounts[0]);
+            }
+        });
+    }
+}
+
+async function handleAdminWalletConnected(addr) {
+    adminWeb3State.connectedAddress = addr;
+    adminWeb3State.provider = new ethers.BrowserProvider(window.ethereum);
+    adminWeb3State.signer = await adminWeb3State.provider.getSigner();
+    adminWeb3State.contractWrite = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, adminWeb3State.signer);
+    
+    updateAdminWalletUI();
+}
+
+function updateAdminWalletUI() {
+    const connectBtn = document.getElementById("adminConnectWalletBtn");
+    const executeBtn = document.getElementById("adminExecuteMiningBtn");
+    const statusText = document.getElementById("adminMiningStatus");
+    const indicator = document.getElementById("adminWalletIndicator");
+    const connectText = document.getElementById("adminConnectWalletText");
+    
+    if (!connectBtn || !executeBtn || !statusText) return;
+    
+    if (adminWeb3State.connectedAddress) {
+        const addr = adminWeb3State.connectedAddress;
+        if (connectText) connectText.innerText = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+        if (indicator) indicator.style.backgroundColor = "var(--success)";
+        
+        const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+        if (isOwner) {
+            executeBtn.disabled = false;
+            statusText.innerText = "Verified Owner Signature. Daily emissions protocol unlocked.";
+            statusText.style.color = "var(--success)";
+        } else {
+            executeBtn.disabled = true;
+            statusText.innerText = `Connected address is not the contract owner. Access Denied.`;
+            statusText.style.color = "var(--danger)";
+        }
+    } else {
+        if (connectText) connectText.innerText = "Connect Admin Wallet";
+        if (indicator) indicator.style.backgroundColor = "#94a3b8";
+        executeBtn.disabled = true;
+        statusText.innerText = "Wallet not connected. Connect the contract owner wallet to verify privileges.";
+        statusText.style.color = "var(--text-muted)";
+    }
+}
+
+function simulateAdminWalletConnection() {
+    adminWeb3State.connectedAddress = OWNER_ADDRESS;
+    adminWeb3State.provider = null;
+    adminWeb3State.signer = null;
+    adminWeb3State.contractWrite = {
+        executeDailyMining: async () => {
+            return {
+                hash: "0x" + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join(""),
+                wait: async () => {
+                    return { status: 1 };
+                }
+            };
+        }
+    };
+    updateAdminWalletUI();
+    showToast("Connected in Admin Simulation Mode!");
+}
+
+// ----------------------------------------------------
+// CLIENT CRM (CUSTOMER RELATIONSHIP MANAGEMENT) PANEL
+// ----------------------------------------------------
+let currentInspectedClient = null;
+
+function renderClientsDirectory() {
+    const tableBody = document.getElementById("adminClientsTableBody");
+    const searchVal = (document.getElementById("adminClientSearch")?.value || "").toLowerCase().trim();
+    const kycFilter = document.getElementById("adminClientKycFilter")?.value || "ALL";
+    
+    if (!tableBody) return;
+    tableBody.innerHTML = "";
+    
+    refreshAdminDatabase();
+    
+    const clientKeys = Object.keys(usersData);
+    let matchedCount = 0;
+    
+    clientKeys.forEach(username => {
+        const user = usersData[username];
+        const matchSearch = user.username.toLowerCase().includes(searchVal) || 
+                            user.email.toLowerCase().includes(searchVal);
+        
+        const userKycStatus = (user.kyc && user.kyc.status) ? user.kyc.status : "Not Submitted";
+        const matchKyc = (kycFilter === "ALL") || (userKycStatus === kycFilter);
+        
+        if (matchSearch && matchKyc) {
+            matchedCount++;
+            
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td class="font-tech text-cyan" style="font-weight:700;">${user.username}</td>
+                <td>${user.email}</td>
+                <td class="font-tech text-cyan">${(user.balance || 0).toFixed(4)} ELX</td>
+                <td class="font-tech text-success">${(user.miningBalance || 0).toFixed(4)} ELX</td>
+                <td class="font-tech" style="font-size:0.85rem;">${user.walletLinked ? `${user.walletLinked.slice(0, 6)}...${user.walletLinked.slice(-4)}` : '<span style="color:var(--text-muted);">None</span>'}</td>
+                <td>
+                    <span class="badge-status ${getKycBadgeClass(userKycStatus)}">
+                        ${userKycStatus}
+                    </span>
+                </td>
+                <td style="text-align: right;">
+                    <button class="btn btn-secondary btn-sm" onclick="openClientCrm('${user.username}')" style="padding: 0.3rem 0.75rem;">Manage</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        }
+    });
+    
+    if (matchedCount === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="empty-table-msg" style="text-align:center; padding: 2rem 0;">
+                    <div class="empty-state-visual">👥</div>
+                    No clients matched the current filter criteria.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function getKycBadgeClass(status) {
+    switch (status) {
+        case "Approved": return "open";
+        case "Pending": return "pending";
+        case "Rejected": return "rejected";
+        default: return "closed";
+    }
+}
+
+function openClientCrm(username) {
+    refreshAdminDatabase();
+    const user = usersData[username.toLowerCase()];
+    if (!user) {
+        showToast("User not found!");
+        return;
+    }
+    currentInspectedClient = username.toLowerCase();
+    
+    const modal = document.getElementById("crmClientModal");
+    if (!modal) return;
+    
+    document.getElementById("crmUsername").innerText = user.username;
+    document.getElementById("crmEmailInput").value = user.email;
+    document.getElementById("crmPassInput").value = "";
+    
+    document.getElementById("crmStakingBalanceText").innerText = `${(user.balance || 0).toFixed(4)} ELX`;
+    document.getElementById("crmMiningBalanceText").innerText = `${(user.miningBalance || 0).toFixed(4)} ELX`;
+    document.getElementById("crmWalletInput").value = user.walletLinked || "";
+    
+    const kycStatus = (user.kyc && user.kyc.status) ? user.kyc.status : "Not Submitted";
+    document.getElementById("crmKycOverride").value = kycStatus;
+    
+    document.getElementById("crmStakingAdjustment").value = "";
+    document.getElementById("crmMiningAdjustment").value = "";
+    document.getElementById("crmNewStakeAmount").value = "";
+    document.getElementById("crmNewStakeApy").value = "";
+    document.getElementById("crmNewStakeTerm").value = "";
+    document.getElementById("crmNewTxType").value = "";
+    document.getElementById("crmNewTxAmount").value = "";
+    document.getElementById("crmNewTxDesc").value = "";
+    
+    renderCrmStakesList(user);
+    renderCrmTxList(user);
+    
+    modal.classList.add("active");
+}
+window.openClientCrm = openClientCrm;
+
+function renderCrmStakesList(user) {
+    const tbody = document.getElementById("crmStakesTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    const stakes = user.stakes || [];
+    if (stakes.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="empty-table-msg" style="text-align:center; padding: 1rem 0; font-size:0.8rem;">
+                    No active staking lockups found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    stakes.forEach((stake, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>${stake.termDays} Days</td>
+            <td class="font-tech text-cyan">${(stake.amount || 0).toFixed(2)} ELX</td>
+            <td class="font-tech text-success">${(stake.apy || 0)}%</td>
+            <td style="font-size:0.8rem;">${formatDate(new Date(stake.timestamp))}</td>
+            <td>
+                <span class="badge-status ${stake.active ? 'open' : 'closed'}">
+                    ${stake.active ? 'Active' : 'Unlocked'}
+                </span>
+            </td>
+            <td style="text-align: right;">
+                ${stake.active ? `<button class="btn btn-danger-glow btn-sm" onclick="crmForceUnlockStake(${index})" style="padding: 0.15rem 0.5rem; font-size:0.75rem;">Unlock</button>` : '<span style="color:var(--text-muted);">Released</span>'}
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+window.crmForceUnlockStake = function(index) {
+    if (!currentInspectedClient) return;
+    const user = usersData[currentInspectedClient];
+    const stake = user.stakes[index];
+    
+    const confirmUnlock = confirm(`Unlock this yield position early and refund ${stake.amount} ELX to the staking wallet?`);
+    if (confirmUnlock) {
+        stake.active = false;
+        user.balance = (user.balance || 0) + stake.amount;
+        
+        user.transactions = user.transactions || [];
+        user.transactions.push({
+            type: "Early Unlock",
+            amount: stake.amount,
+            unit: "ELX",
+            timestamp: Date.now(),
+            desc: `Admin forced early release of ${stake.termDays}-day position.`
+        });
+        
+        saveAdminDatabase();
+        showToast("Staking yield unlocked and refunded.");
+        openClientCrm(currentInspectedClient);
+        renderClientsDirectory();
+    }
+};
+
+function renderCrmTxList(user) {
+    const tbody = document.getElementById("crmTxTableBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    
+    const txs = user.transactions || [];
+    if (txs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty-table-msg" style="text-align:center; padding: 1rem 0; font-size:0.8rem;">
+                    No ledger transactions logged.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    const sortedTxs = [...txs].sort((a, b) => b.timestamp - a.timestamp);
+    
+    sortedTxs.forEach(tx => {
+        const isCredit = tx.amount >= 0;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td style="font-size:0.8rem;">${formatDate(new Date(tx.timestamp))}</td>
+            <td><span class="badge-status ${isCredit ? 'open' : 'rejected'}" style="font-size:0.75rem;">${tx.type}</span></td>
+            <td class="font-tech ${isCredit ? 'text-success' : 'text-danger'}" style="font-weight:700;">
+                ${isCredit ? '+' : ''}${tx.amount.toFixed(4)} ${tx.unit || 'ELX'}
+            </td>
+            <td style="font-size:0.8rem; color:var(--text-secondary);">${tx.desc || ''}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function adjustInspectedBalance(walletType, action) {
+    if (!currentInspectedClient) return;
+    const user = usersData[currentInspectedClient];
+    
+    let inputId = walletType === "staking" ? "crmStakingAdjustment" : "crmMiningAdjustment";
+    let textId = walletType === "staking" ? "crmStakingBalanceText" : "crmMiningBalanceText";
+    
+    const adjustmentInput = document.getElementById(inputId);
+    const amt = parseFloat(adjustmentInput.value);
+    
+    if (isNaN(amt) || amt <= 0) {
+        showToast("Please enter a valid positive amount.");
+        return;
+    }
+    
+    const change = action === "add" ? amt : -amt;
+    
+    if (walletType === "staking") {
+        user.balance = Math.max(0, (user.balance || 0) + change);
+        document.getElementById(textId).innerText = `${user.balance.toFixed(4)} ELX`;
+    } else {
+        user.miningBalance = Math.max(0, (user.miningBalance || 0) + change);
+        document.getElementById(textId).innerText = `${user.miningBalance.toFixed(4)} ELX`;
+    }
+    
+    user.transactions = user.transactions || [];
+    user.transactions.push({
+        type: action === "add" ? "Admin Credit" : "Admin Debit",
+        amount: change,
+        unit: "ELX",
+        timestamp: Date.now(),
+        desc: `Admin manual balance adjustment (${walletType} wallet).`
+    });
+    
+    saveAdminDatabase();
+    showToast(`Ledger adjusted: ${action === "add" ? '+' : ''}${change.toFixed(4)} ELX.`);
+    
+    adjustmentInput.value = "";
+    renderCrmTxList(user);
+    renderClientsDirectory();
+}
+
+function registerClientFromCrm() {
+    const usernameInput = document.getElementById("createClientUsername");
+    const emailInput = document.getElementById("createClientEmail");
+    const passInput = document.getElementById("createClientPassword");
+    const balanceInput = document.getElementById("createClientBalance");
+    
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const pass = passInput.value;
+    const balance = parseFloat(balanceInput.value);
+    
+    if (!username || !email || !pass || isNaN(balance)) {
+        showToast("Please fill out all fields.");
+        return;
+    }
+    
+    if (pass.length < 6) {
+        showToast("Password must be at least 6 characters.");
+        return;
+    }
+    
+    refreshAdminDatabase();
+    if (usersData[username.toLowerCase()]) {
+        showToast("Username is already taken.");
+        return;
+    }
+    
+    const newUser = {
+        username: username,
+        email: email,
+        passwordHash: btoa(pass), 
+        balance: balance, 
+        miningBalance: 0, 
+        hashesComputed: 0,
+        sharesFound: 0,
+        walletLinked: null,
+        stakes: [],
+        transactions: [
+            {
+                type: "Account Registration",
+                amount: balance,
+                unit: "ELX",
+                timestamp: Date.now(),
+                desc: "Welcome bonus pre-loaded by system administrator."
+            }
+        ]
+    };
+    
+    usersData[username.toLowerCase()] = newUser;
+    saveAdminDatabase();
+    
+    showToast(`Client account '${username}' created successfully.`);
+    
+    document.getElementById("crmCreateClientForm").reset();
+    document.getElementById("crmCreateClientModal").classList.remove("active");
+    
+    renderClientsDirectory();
+}
+
+function initCrmActionListeners() {
+    const searchInput = document.getElementById("adminClientSearch");
+    if (searchInput) searchInput.addEventListener("keyup", renderClientsDirectory);
+    
+    const kycFilter = document.getElementById("adminClientKycFilter");
+    if (kycFilter) kycFilter.addEventListener("change", renderClientsDirectory);
+    
+    const btnCreate = document.getElementById("adminBtnCreateClient");
+    if (btnCreate) {
+        btnCreate.addEventListener("click", () => {
+            const modal = document.getElementById("crmCreateClientModal");
+            if (modal) modal.classList.add("active");
+        });
+    }
+    
+    const closeCreate = document.getElementById("closeCreateClientModalBtn");
+    if (closeCreate) {
+        closeCreate.addEventListener("click", () => {
+            const modal = document.getElementById("crmCreateClientModal");
+            if (modal) modal.classList.remove("active");
+        });
+    }
+    
+    const createForm = document.getElementById("crmCreateClientForm");
+    if (createForm) {
+        createForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            registerClientFromCrm();
+        });
+    }
+    
+    const closeCrm = document.getElementById("closeCrmModalBtn");
+    if (closeCrm) {
+        closeCrm.addEventListener("click", () => {
+            const modal = document.getElementById("crmClientModal");
+            if (modal) modal.classList.remove("active");
+            currentInspectedClient = null;
+        });
+    }
+    
+    const addStaking = document.getElementById("crmBtnAddStaking");
+    const subStaking = document.getElementById("crmBtnSubStaking");
+    if (addStaking) addStaking.addEventListener("click", () => adjustInspectedBalance("staking", "add"));
+    if (subStaking) subStaking.addEventListener("click", () => adjustInspectedBalance("staking", "sub"));
+    
+    const addMining = document.getElementById("crmBtnAddMining");
+    const subMining = document.getElementById("crmBtnSubMining");
+    if (addMining) addMining.addEventListener("click", () => adjustInspectedBalance("mining", "add"));
+    if (subMining) subMining.addEventListener("click", () => adjustInspectedBalance("mining", "sub"));
+    
+    const unlinkWallet = document.getElementById("crmBtnUnlinkWallet");
+    if (unlinkWallet) {
+        unlinkWallet.addEventListener("click", () => {
+            document.getElementById("crmWalletInput").value = "";
+            showToast("Wallet address field cleared. Click Save to commit.");
+        });
+    }
+    
+    const saveKyc = document.getElementById("crmBtnSaveKyc");
+    if (saveKyc) {
+        saveKyc.addEventListener("click", () => {
+            if (!currentInspectedClient) return;
+            const newKyc = document.getElementById("crmKycOverride").value;
+            usersData[currentInspectedClient].kyc = usersData[currentInspectedClient].kyc || {};
+            usersData[currentInspectedClient].kyc.status = newKyc;
+            usersData[currentInspectedClient].kyc.timestamp = Date.now();
+            saveAdminDatabase();
+            showToast(`KYC status set to ${newKyc} for ${usersData[currentInspectedClient].username}`);
+            renderClientsDirectory();
+        });
+    }
+    
+    const addCustomStake = document.getElementById("crmBtnAddCustomStake");
+    if (addCustomStake) {
+        addCustomStake.addEventListener("click", () => {
+            if (!currentInspectedClient) return;
+            const amountInput = document.getElementById("crmNewStakeAmount");
+            const apyInput = document.getElementById("crmNewStakeApy");
+            const termInput = document.getElementById("crmNewStakeTerm");
+            
+            const amt = parseFloat(amountInput.value);
+            const apy = parseFloat(apyInput.value);
+            const term = parseInt(termInput.value);
+            
+            if (isNaN(amt) || amt <= 0 || isNaN(apy) || apy <= 0 || isNaN(term) || term <= 0) {
+                showToast("Please fill in valid positive numbers.");
+                return;
+            }
+            
+            const user = usersData[currentInspectedClient];
+            user.stakes = user.stakes || [];
+            user.stakes.push({
+                amount: amt,
+                apy: apy,
+                termDays: term,
+                timestamp: Date.now(),
+                active: true
+            });
+            
+            user.balance = Math.max(0, (user.balance || 0) - amt);
+            
+            user.transactions = user.transactions || [];
+            user.transactions.push({
+                type: "Staking Lock",
+                amount: -amt,
+                unit: "ELX",
+                timestamp: Date.now(),
+                desc: `Admin manual allocation: Locked ${amt} ELX for ${term} days.`
+            });
+            
+            saveAdminDatabase();
+            showToast("Custom staking position created!");
+            
+            amountInput.value = "";
+            apyInput.value = "";
+            termInput.value = "";
+            
+            openClientCrm(currentInspectedClient);
+            renderClientsDirectory();
+        });
+    }
+    
+    const addTxLog = document.getElementById("crmBtnAddTxLog");
+    if (addTxLog) {
+        addTxLog.addEventListener("click", () => {
+            if (!currentInspectedClient) return;
+            const typeInput = document.getElementById("crmNewTxType");
+            const amountInput = document.getElementById("crmNewTxAmount");
+            const descInput = document.getElementById("crmNewTxDesc");
+            
+            const type = typeInput.value.trim();
+            const amt = parseFloat(amountInput.value);
+            const desc = descInput.value.trim();
+            
+            if (!type || isNaN(amt)) {
+                showToast("Please enter transaction type and amount.");
+                return;
+            }
+            
+            const user = usersData[currentInspectedClient];
+            user.transactions = user.transactions || [];
+            user.transactions.push({
+                type: type,
+                amount: amt,
+                unit: "ELX",
+                timestamp: Date.now(),
+                desc: desc || `Admin manual entry: ${type}`
+            });
+            
+            saveAdminDatabase();
+            showToast("Transaction logged in ledger!");
+            
+            typeInput.value = "";
+            amountInput.value = "";
+            descInput.value = "";
+            
+            openClientCrm(currentInspectedClient);
+        });
+    }
+    
+    const saveProfile = document.getElementById("crmBtnSaveProfile");
+    if (saveProfile) {
+        saveProfile.addEventListener("click", () => {
+            if (!currentInspectedClient) return;
+            const email = document.getElementById("crmEmailInput").value.trim();
+            const pass = document.getElementById("crmPassInput").value;
+            const wallet = document.getElementById("crmWalletInput").value.trim();
+            
+            if (!email) {
+                showToast("Email address cannot be empty.");
+                return;
+            }
+            
+            const user = usersData[currentInspectedClient];
+            user.email = email;
+            if (pass.length > 0) {
+                if (pass.length < 6) {
+                    showToast("Password must be at least 6 characters.");
+                    return;
+                }
+                user.passwordHash = btoa(pass);
+            }
+            user.walletLinked = wallet || null;
+            
+            saveAdminDatabase();
+            showToast("Client profile changes saved successfully!");
+            
+            const modal = document.getElementById("crmClientModal");
+            if (modal) modal.classList.remove("active");
+            currentInspectedClient = null;
+            
+            renderClientsDirectory();
+        });
+    }
+    
+    const deleteBtn = document.getElementById("crmBtnDeleteAccount");
+    if (deleteBtn) {
+        deleteBtn.addEventListener("click", () => {
+            if (!currentInspectedClient) return;
+            const user = usersData[currentInspectedClient];
+            const confirmDel = confirm(`Are you sure you want to permanently delete the account of '${user.username}'? This cannot be undone.`);
+            if (confirmDel) {
+                delete usersData[currentInspectedClient];
+                saveAdminDatabase();
+                showToast("Account deleted successfully.");
+                
+                const modal = document.getElementById("crmClientModal");
+                if (modal) modal.classList.remove("active");
+                currentInspectedClient = null;
+                
+                renderClientsDirectory();
+            }
+        });
+    }
 }

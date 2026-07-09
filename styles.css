@@ -397,8 +397,12 @@ h1, h2, h3, h4 {
     background-color: var(--bg-base);
     z-index: 99;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    padding-top: 90px;
+    padding-bottom: 2rem;
+    overflow-y: auto;
     opacity: 0;
     pointer-events: none;
     transition: var(--transition-smooth);
@@ -3433,6 +3437,51 @@ h1, h2, h3, h4 {
 
     .hero-title {
         font-size: 2.2rem !important;
+    }
+}
+
+/* ----------------------------------------------------
+   RESPONSIVE UTILITY GRID CLASSES & OVERRIDES
+   (Added during Mobile Optimization)
+---------------------------------------------------- */
+.dashboard-grid.grid-2col {
+    grid-template-columns: 1fr 1fr;
+}
+.dashboard-grid.grid-1-5col {
+    grid-template-columns: 1fr 1.5fr;
+}
+
+@media (max-width: 1024px) {
+    .dashboard-grid.grid-2col,
+    .dashboard-grid.grid-1-5col {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .node-status-panel {
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 1rem !important;
+        padding: 1rem 1.5rem !important;
+    }
+    
+    .dashboard-tabs-nav {
+        overflow-x: auto !important;
+        flex-wrap: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 6px !important;
+    }
+    
+    .dash-tab-btn {
+        flex-shrink: 0 !important;
+        white-space: nowrap !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .contract-address {
+        font-size: 0.78rem !important;
     }
 }
 

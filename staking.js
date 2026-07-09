@@ -1567,7 +1567,13 @@ window.triggerUnstakeFlow = function(index) {
 // MetaMask Connection Binding Flow
 async function linkMetaMaskWallet() {
     if (typeof window.ethereum === 'undefined') {
-        showToast("Please install MetaMask to link your Web3 identity!");
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            const deepLink = "https://metamask.app.link/dapp/" + window.location.href.replace(/^https?:\/\//, "");
+            window.location.href = deepLink;
+        } else {
+            showToast("Please install MetaMask to link your Web3 identity!");
+        }
         return;
     }
     
@@ -1967,21 +1973,31 @@ function initPublicNodeTracker() {
     const nodeBlock = document.getElementById("nodeBlockVal");
     const nodePing = document.getElementById("nodePingVal");
     const nodeGas = document.getElementById("nodeGasVal");
+    const nodePeers = document.getElementById("nodePeersVal");
+    const nodeEpoch = document.getElementById("nodeEpochVal");
+    const nodeTps = document.getElementById("nodeTpsVal");
     
     if (!nodeBlock && !nodePing && !nodeGas) return;
     
     let baseBlock = 41209000;
+    let baseEpoch = 810;
     
     const updateStats = () => {
         if (nodeBlock) nodeBlock.innerText = `#${baseBlock.toLocaleString()}`;
         if (nodePing) nodePing.innerText = `${Math.floor(Math.random() * (65 - 40 + 1)) + 40} ms`;
         if (nodeGas) nodeGas.innerText = `${(3.0 + Math.random() * 0.4).toFixed(2)} Gwei`;
+        if (nodePeers) nodePeers.innerText = `${Math.floor(Math.random() * (22 - 16 + 1)) + 16} Peers`;
+        if (nodeEpoch) nodeEpoch.innerText = `#${baseEpoch}`;
+        if (nodeTps) nodeTps.innerText = `${(10.0 + Math.random() * 5.0).toFixed(1)} tps`;
     };
     
     updateStats();
     
     nodeStatsTimer = setInterval(() => {
         baseBlock += 1;
+        if (baseBlock % 60 === 0) {
+            baseEpoch += 1;
+        }
         updateStats();
         if (nodeBlock) {
             nodeBlock.style.color = "var(--success)";

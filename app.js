@@ -190,8 +190,8 @@ async function initPublicData() {
     // Only run if public stats elements are on this page
     if (!minedVal && !lockedVal && !timestampVal) return;
 
-    // Refresh contract stats immediately
-    await refreshContractStats();
+    // Start Live Emissions Ticker for real-time progress preview
+    startLiveEmissionsTicker();
 }
 
 // Start Live Emissions Tick Loop (mines exactly 100 ELX over a 24-hour cycle)
@@ -385,7 +385,13 @@ function initWeb3Listeners() {
 // Core Connect Wallet Flow
 async function connectWallet() {
     if (typeof window.ethereum === 'undefined') {
-        showToast("Please install MetaMask to connect your wallet!");
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            const deepLink = "https://metamask.app.link/dapp/" + window.location.href.replace(/^https?:\/\//, "");
+            window.location.href = deepLink;
+        } else {
+            showToast("Please install MetaMask to connect your wallet!");
+        }
         return;
     }
 
@@ -821,7 +827,13 @@ function addTerminalLog(message, type = "muted") {
 // Add token to metamask wallet
 async function addTokenToMetaMask() {
     if (typeof window.ethereum === 'undefined') {
-        showToast("Please install MetaMask to add custom tokens!");
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            const deepLink = "https://metamask.app.link/dapp/" + window.location.href.replace(/^https?:\/\//, "");
+            window.location.href = deepLink;
+        } else {
+            showToast("Please install MetaMask to add custom tokens!");
+        }
         return;
     }
 

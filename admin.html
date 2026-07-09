@@ -137,6 +137,12 @@
                         <button id="adminTabBtnSupport" class="dash-tab-btn">
                             <span class="icon">💬</span> Support Tickets
                         </button>
+                        <button id="adminTabBtnMining" class="dash-tab-btn">
+                            <span class="icon">⛏️</span> Daily Mining
+                        </button>
+                        <button id="adminTabBtnClients" class="dash-tab-btn">
+                            <span class="icon">👥</span> Client Directory (CRM)
+                        </button>
                     </div>
 
                     <!-- SUB-VIEW 1: DEPOSITS AUDIT -->
@@ -241,6 +247,76 @@
                                     <div class="empty-state-visual">📨</div>
                                     No active support inquiries registered.
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SUB-VIEW 5: DAILY MINING -->
+                    <div id="adminViewMining" class="admin-tab-view-panel" style="display: none;">
+                        <div class="dashboard-card card-glow" style="margin-bottom: 2rem;">
+                            <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                                <span class="icon">⛏️</span> Execute Live Mining Emissions
+                            </h3>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                                Trigger the smart contract emissions protocol to release the daily 100 ELX distribution. This action requires a MetaMask signature from the contract owner's wallet address.
+                            </p>
+                            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                                <button id="adminConnectWalletBtn" class="btn btn-wallet btn-glow" style="background: rgba(0, 240, 255, 0.08); border-color: var(--accent-cyan); color: var(--accent-cyan); display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem;">
+                                    <span class="wallet-indicator" id="adminWalletIndicator" style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;"></span>
+                                    <span id="adminConnectWalletText">Connect Admin Wallet</span>
+                                </button>
+                                <button id="adminExecuteMiningBtn" class="btn btn-primary btn-glow" style="padding: 0.75rem 1.5rem;" disabled>
+                                    Execute Daily Mining (100 ELX)
+                                </button>
+                            </div>
+                            <p id="adminMiningStatus" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
+                                Wallet not connected. Connect the contract owner wallet to verify privileges.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- SUB-VIEW 6: CLIENT DIRECTORY (CRM) -->
+                    <div id="adminViewClients" class="admin-tab-view-panel" style="display: none;">
+                        <div class="dashboard-card card-glow" style="margin-bottom: 2rem;">
+                            <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                                <span class="icon">👥</span> Client Directory (CRM)
+                            </h3>
+                            
+                            <!-- Search and Filters Bar -->
+                            <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1.5rem;">
+                                <div style="display: flex; gap: 1rem; flex-grow: 1; max-width: 600px;">
+                                    <input type="text" id="adminClientSearch" class="form-input text-cyan" placeholder="Search by username or email..." style="flex-grow: 2; padding: 0.65rem 1rem;">
+                                    <select id="adminClientKycFilter" class="form-input text-cyan" style="flex-grow: 1; padding: 0.65rem 1rem; background: var(--bg-surface); width: 180px;">
+                                        <option value="ALL">All KYC Statuses</option>
+                                        <option value="Approved">Approved Only</option>
+                                        <option value="Pending">Pending Only</option>
+                                        <option value="Rejected">Rejected Only</option>
+                                        <option value="Not Submitted">Not Submitted Only</option>
+                                    </select>
+                                </div>
+                                <button id="adminBtnCreateClient" class="btn btn-primary btn-glow" style="padding: 0.65rem 1.5rem;">
+                                    ➕ Register Client Account
+                                </button>
+                            </div>
+
+                            <!-- Clients Table -->
+                            <div style="overflow-x: auto;">
+                                <table class="stakes-table" style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Client Name</th>
+                                            <th>Email Address</th>
+                                            <th>Staking Bal</th>
+                                            <th>Mining Bal</th>
+                                            <th>Web3 Wallet</th>
+                                            <th>KYC State</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adminClientsTableBody">
+                                        <!-- Populated dynamically via JS -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
@@ -371,7 +447,189 @@
         </div>
     </div>
 
+    <!-- CRM Client Manager Modal -->
+    <div id="crmClientModal" class="modal-overlay">
+        <div class="modal-card card-glow" style="max-width: 800px; background: var(--bg-surface); border: 1px solid var(--border-titanium-hover); border-radius: 12px; width: 90%; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">👥</span> Client CRM Manager</h3>
+                <button id="closeCrmModalBtn" class="modal-close-x" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 1.5rem; color: var(--text-primary); padding: 0.5rem 0;">
+                <!-- User Basic Details -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-titanium);">
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">CLIENT USERNAME</span>
+                        <span id="crmUsername" class="font-tech text-cyan" style="font-weight: 700; font-size: 1.15rem;">username</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">EMAIL ADDRESS</span>
+                        <input type="email" id="crmEmailInput" class="form-input" style="padding: 0.4rem 0.6rem; font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">RESET PASSWORD</span>
+                        <input type="password" id="crmPassInput" class="form-input" placeholder="New password" style="padding: 0.4rem 0.6rem; font-size: 0.9rem;">
+                    </div>
+                </div>
+
+                <!-- Balances and Wallets -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem;">
+                    <!-- Staking Wallet Balance Card -->
+                    <div class="dashboard-card card-glow" style="padding: 1rem; margin: 0;">
+                        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">STAKING WALLET</h4>
+                        <div id="crmStakingBalanceText" class="font-tech text-cyan" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.75rem;">10.0000 ELX</div>
+                        <div class="form-group" style="display: flex; gap: 0.5rem; margin: 0;">
+                            <input type="number" id="crmStakingAdjustment" class="form-input" placeholder="0.00" step="any" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <button id="crmBtnAddStaking" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.75rem;">Add</button>
+                            <button id="crmBtnSubStaking" class="btn btn-danger-glow btn-sm" style="padding: 0.4rem 0.75rem;">Sub</button>
+                        </div>
+                    </div>
+
+                    <!-- Mining Wallet Balance Card -->
+                    <div class="dashboard-card card-glow" style="padding: 1rem; margin: 0;">
+                        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; letter-spacing: 0.05em;">MINING WALLET</h4>
+                        <div id="crmMiningBalanceText" class="font-tech text-success" style="font-size: 1.35rem; font-weight: 700; margin-bottom: 0.75rem;">0.0000 ELX</div>
+                        <div class="form-group" style="display: flex; gap: 0.5rem; margin: 0;">
+                            <input type="number" id="crmMiningAdjustment" class="form-input" placeholder="0.00" step="any" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <button id="crmBtnAddMining" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.75rem; background: var(--success); border-color: var(--success); color: var(--bg-base);">Add</button>
+                            <button id="crmBtnSubMining" class="btn btn-danger-glow btn-sm" style="padding: 0.4rem 0.75rem;">Sub</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Web3 Link & KYC Overrides -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+                    <div class="dashboard-card card-glow" style="padding: 1rem; margin: 0;">
+                        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Linked Web3 Identity</h4>
+                        <div class="form-group" style="display: flex; gap: 0.5rem; margin: 0;">
+                            <input type="text" id="crmWalletInput" class="form-input font-tech text-cyan" placeholder="0x..." style="padding: 0.4rem; font-size: 0.8rem; flex-grow: 1;">
+                            <button id="crmBtnUnlinkWallet" class="btn btn-danger-glow btn-sm" style="padding: 0.4rem 0.75rem;">Unlink</button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card card-glow" style="padding: 1rem; margin: 0;">
+                        <h4 style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Identity verification (KYC)</h4>
+                        <div class="form-group" style="display: flex; gap: 0.5rem; margin: 0;">
+                            <select id="crmKycOverride" class="form-input text-cyan" style="padding: 0.4rem; font-size: 0.85rem; background: var(--bg-surface); flex-grow: 1;">
+                                <option value="Not Submitted">Not Submitted</option>
+                                <option value="Pending">Pending Audit</option>
+                                <option value="Approved">Approved / Verified</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                            <button id="crmBtnSaveKyc" class="btn btn-primary btn-sm" style="padding: 0.4rem 0.75rem;">Override</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Staking Manager -->
+                <div class="dashboard-card card-glow" style="padding: 1.25rem; margin: 0;">
+                    <h4 style="font-size: 0.95rem; color: var(--accent-cyan); border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">⛓️ Active Yield Staking Positions</h4>
+                    <div style="overflow-x: auto; max-height: 200px; margin-bottom: 1rem;">
+                        <table class="stakes-table" style="width: 100%; font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Lock Term</th>
+                                    <th>Principal</th>
+                                    <th>Est. APY</th>
+                                    <th>Start Date</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crmStakesTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                        <h5 style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Add Custom Yield Stake Position</h5>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <input type="number" id="crmNewStakeAmount" class="form-input" placeholder="Amount (ELX)" style="padding: 0.35rem; font-size: 0.8rem; width: 120px;">
+                            <input type="number" id="crmNewStakeApy" class="form-input" placeholder="APY %" style="padding: 0.35rem; font-size: 0.8rem; width: 80px;">
+                            <input type="number" id="crmNewStakeTerm" class="form-input" placeholder="Days" style="padding: 0.35rem; font-size: 0.8rem; width: 80px;">
+                            <button id="crmBtnAddCustomStake" class="btn btn-primary btn-sm" style="padding: 0.35rem 0.75rem;">Create Staking Position</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Transactions Log Manager -->
+                <div class="dashboard-card card-glow" style="padding: 1.25rem; margin: 0;">
+                    <h4 style="font-size: 0.95rem; color: var(--accent-cyan); border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">💸 Financial Ledger Logs</h4>
+                    <div style="overflow-x: auto; max-height: 200px; margin-bottom: 1rem;">
+                        <table class="stakes-table" style="width: 100%; font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>Log Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Memo / Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="crmTxTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); padding: 0.75rem; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                        <h5 style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.5rem;">Add Manual Transaction Log</h5>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                            <input type="text" id="crmNewTxType" class="form-input" placeholder="Type (e.g. Bonus, Debit)" style="padding: 0.35rem; font-size: 0.8rem; width: 150px;">
+                            <input type="number" id="crmNewTxAmount" class="form-input" placeholder="Amount" step="any" style="padding: 0.35rem; font-size: 0.8rem; width: 100px;">
+                            <input type="text" id="crmNewTxDesc" class="form-input" placeholder="Description/memo..." style="padding: 0.35rem; font-size: 0.8rem; flex-grow: 1;">
+                            <button id="crmBtnAddTxLog" class="btn btn-primary btn-sm" style="padding: 0.35rem 0.75rem;">Record Log</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div style="border: 1px solid rgba(239, 68, 68, 0.25); background: rgba(239, 68, 68, 0.05); padding: 1.25rem; border-radius: 8px; margin-top: 0.5rem;">
+                    <h4 style="font-size: 0.95rem; color: var(--danger); margin-bottom: 0.5rem;">⚠️ Danger Zone</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem;">Permanently remove this sandbox profile. Users will lose all access, ledger transactions, and yield stake records. This action cannot be undone.</p>
+                    <button id="crmBtnDeleteAccount" class="btn btn-danger-glow btn-sm">Delete Account Permanently</button>
+                </div>
+            </div>
+
+            <div class="modal-footer" style="display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid var(--border-titanium); padding-top: 1rem; margin-top: 1rem;">
+                <button id="crmBtnSaveProfile" class="btn btn-primary btn-sm" style="min-width: 140px;">Save Profile Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Client Account Modal -->
+    <div id="crmCreateClientModal" class="modal-overlay">
+        <div class="modal-card card-glow" style="max-width: 480px; background: var(--bg-surface); border: 1px solid var(--border-titanium-hover); border-radius: 12px; width: 90%;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">➕</span> Register New Client Account</h3>
+                <button id="closeCreateClientModalBtn" class="modal-close-x" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+
+            <form id="crmCreateClientForm" class="modal-body" style="display: flex; flex-direction: column; gap: 1.25rem; padding: 0.5rem 0;">
+                <div class="form-group">
+                    <label class="form-label" style="font-size:0.85rem;">Client Username</label>
+                    <input type="text" id="createClientUsername" class="form-input text-cyan" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:0.85rem;">Email Address</label>
+                    <input type="email" id="createClientEmail" class="form-input text-cyan" placeholder="email@domain.com" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:0.85rem;">Access Password</label>
+                    <input type="password" id="createClientPassword" class="form-input text-cyan" placeholder="Minimum 6 characters" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:0.85rem;">Preloaded Staking Balance (ELX)</label>
+                    <input type="number" id="createClientBalance" class="form-input text-cyan" value="10" step="any" required>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 0.5rem;">
+                    <button type="submit" class="btn btn-primary btn-glow" style="width: 100%;">Create Account</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Admin JS Controller -->
+    <!-- Ethers.js Browser CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="admin.js"></script>
 </body>
 
