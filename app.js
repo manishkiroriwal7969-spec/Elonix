@@ -502,17 +502,10 @@ function disconnectWalletState() {
 function checkOwnerPrivileges(address) {
     if (!executeMiningBtn) return;
     
-    const activeAddressLower = address.toLowerCase();
-    const ownerAddressLower = OWNER_ADDRESS.toLowerCase();
-
-    if (activeAddressLower === ownerAddressLower) {
-        executeMiningBtn.disabled = false;
-        executeMiningBtn.classList.add("btn-glow");
-        if (miningBtnTooltip) miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
-    } else {
-        executeMiningBtn.disabled = true;
-        executeMiningBtn.classList.remove("btn-glow");
-        if (miningBtnTooltip) miningBtnTooltip.innerText = `Restricted to Contract Owner only (${OWNER_ADDRESS.slice(0, 6)}...${OWNER_ADDRESS.slice(-4)})`;
+    executeMiningBtn.disabled = false;
+    executeMiningBtn.classList.add("btn-glow");
+    if (miningBtnTooltip) {
+        miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
     }
 }
 
@@ -551,29 +544,19 @@ async function executeDailyMining() {
         }
     } catch (error) {
         console.error("Mining execution failed:", error);
-        
-        // Mockup fallback simulation for development/testing if contract call fails
-        const todayStr = new Date().toDateString();
-        if (localStorage.getItem("elonix_daily_executed_date") !== todayStr) {
-            showToast("Simulating transaction execution locally (Mockup)...");
-            setTimeout(async () => {
-                localStorage.setItem("elonix_daily_executed_date", todayStr);
-                localStorage.setItem("elonix_daily_executed_time", Date.now().toString());
-                
-                showToast("Daily Mining emissions executed successfully (Mockup)!");
-                executeMiningBtn.innerText = "Executed Successfully";
-                setTimeout(() => {
-                    executeMiningBtn.innerText = "Execute Daily Mining";
-                    checkOwnerPrivileges(appState.connectedAddress);
-                }, 5000);
-                
-                await refreshContractStats();
-            }, 2000);
-        } else {
-            showToast("Daily emission already executed for today.");
-            executeMiningBtn.innerText = "Execute Daily Mining";
-            checkOwnerPrivileges(appState.connectedAddress);
+        let errorMsg = "Mining execution failed.";
+        if (error.reason) {
+            errorMsg = `Reverted: ${error.reason}`;
+        } else if (error.message) {
+            if (error.message.includes("user rejected") || error.message.includes("action rejected")) {
+                errorMsg = "Transaction rejected by user.";
+            } else {
+                errorMsg = error.message.split("\n")[0];
+            }
         }
+        showToast(errorMsg);
+        executeMiningBtn.innerText = "Execute Daily Mining";
+        checkOwnerPrivileges(appState.connectedAddress);
     }
 }
 

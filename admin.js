@@ -39,7 +39,14 @@ const DOM = {
     auditIdFront: document.getElementById("auditIdFront"),
     auditIdBack: document.getElementById("auditIdBack"),
     btnRejectKyc: document.getElementById("btnRejectKyc"),
-    btnApproveKyc: document.getElementById("btnApproveKyc")
+    btnApproveKyc: document.getElementById("btnApproveKyc"),
+    
+    // Wallet Confirm Modal
+    walletConfirmModal: document.getElementById("walletConfirmModal"),
+    closeWalletModalBtn: document.getElementById("closeWalletModalBtn"),
+    walletModalMessage: document.getElementById("walletModalMessage"),
+    walletModalCancelBtn: document.getElementById("walletModalCancelBtn"),
+    walletModalConfirmBtn: document.getElementById("walletModalConfirmBtn")
 };
 
 // Sub navigation tabs cache
@@ -616,7 +623,8 @@ let adminWeb3State = {
     provider: null,
     signer: null,
     connectedAddress: null,
-    contractWrite: null
+    contractWrite: null,
+    lastMiningTimeSec: null
 };
 
 let adminMiningListenersBound = false;
@@ -628,17 +636,53 @@ function initAdminMiningTab() {
     if (!connectBtn || !executeBtn || !statusText) return;
     
     updateAdminWalletUI();
+    refreshAdminContractStats();
 
     if (adminMiningListenersBound) return;
     adminMiningListenersBound = true;
     
     connectBtn.addEventListener("click", connectAdminWallet);
+    
+    // Periodically update statistics
+    refreshAdminContractStats();
+    setInterval(refreshAdminContractStats, 5000);
+
+function triggerMockupMiningEmissions() {
+    const executeBtn = document.getElementById("adminExecuteMiningBtn");
+    const statusText = document.getElementById("adminMiningStatus");
+    if (!executeBtn || !statusText) return;
+
+    executeBtn.disabled = true;
+    executeBtn.innerText = "Simulating transaction...";
+    statusText.innerText = "Broadcasting mockup emission block...";
+    statusText.style.color = "var(--accent-cyan)";
+    
+    setTimeout(() => {
+        // Set simulated date to today and time to now
+        localStorage.setItem("elonix_daily_executed_date", new Date().toDateString());
+        localStorage.setItem("elonix_daily_executed_time", String(Date.now()));
+        
+        // Also update local lastMiningTimeSec to now so countdown resets
+        adminWeb3State.lastMiningTimeSec = Math.floor(Date.now() / 1000);
+        
+        showToast("Daily Mining emissions executed successfully (Mockup)!");
+        executeBtn.innerText = "Execution Successful";
+        statusText.innerText = "Daily emissions executed successfully (Mockup).";
+        statusText.style.color = "var(--success)";
+        
+        setTimeout(() => {
+            updateAdminWalletUI();
+            refreshAdminContractStats();
+        }, 3000);
+    }, 2000);
+}
 
     executeBtn.addEventListener("click", async () => {
         if (!adminWeb3State.contractWrite || !adminWeb3State.connectedAddress) {
             showToast("Admin wallet not connected!");
             return;
         }
+
         try {
             executeBtn.disabled = true;
             executeBtn.innerText = "Pending Signature...";
@@ -652,23 +696,34 @@ function initAdminMiningTab() {
             showToast("Emissions transaction sent!");
             
             const receipt = await tx.wait();
-            if (receipt.status === 1) {
+            if (receipt && receipt.status === 1) {
                 showToast("Mining emissions triggered successfully!");
                 executeBtn.innerText = "Execution Successful";
                 statusText.innerText = "Daily emissions executed successfully.";
                 statusText.style.color = "var(--success)";
                 localStorage.setItem("elonix_daily_executed_date", new Date().toDateString());
                 localStorage.setItem("elonix_daily_executed_time", String(Date.now()));
+                setTimeout(() => {
+                    updateAdminWalletUI();
+                }, 3000);
             } else {
                 throw new Error("Execution failed on chain.");
             }
         } catch (err) {
             console.error("Mining tx failed:", err);
-            showToast("Execution failed!");
-            executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+            let errorMsg = "Mining transaction failed.";
+            if (err.reason) {
+                errorMsg = `Reverted: ${err.reason}`;
+            } else if (err.message) {
+                if (err.message.includes("user rejected") || err.message.includes("action rejected")) {
+                    errorMsg = "Transaction rejected by user.";
+                } else {
+                    errorMsg = err.message.split("\n")[0];
+                }
+            }
+            showToast(errorMsg);
             executeBtn.disabled = false;
-            statusText.innerText = `Transaction failed: ${err.message || err}`;
-            statusText.style.color = "var(--danger)";
+            updateAdminWalletUI();
         }
     });
 
@@ -686,41 +741,104 @@ function initAdminMiningTab() {
     }
 }
 
-async function connectAdminWallet() {
-    if (typeof window.ethereum === 'undefined') {
-        const confirmSimulate = confirm("No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?");
-        if (confirmSimulate) {
-            simulateAdminWalletConnection();
-        } else {
-            showToast("Please install MetaMask!");
-        }
+function showWalletConfirmModal(message, onConfirm) {
+    if (!DOM.walletConfirmModal) {
+        if (confirm(message)) onConfirm();
         return;
     }
     
-    // Add a connection timeout fallback for automated/headless environments
-    let connectionTimeout = setTimeout(() => {
-        const confirmSimulate = confirm("Wallet connection timed out. Would you like to connect in simulated Admin mode for testing?");
-        if (confirmSimulate) {
-            simulateAdminWalletConnection();
-        }
-    }, 3000);
+    if (DOM.walletModalMessage) DOM.walletModalMessage.innerText = message;
+    DOM.walletConfirmModal.classList.add("active");
+    
+    // Clear old event listeners by cloning
+    const confirmBtn = DOM.walletModalConfirmBtn;
+    const cancelBtn = DOM.walletModalCancelBtn;
+    const closeBtn = DOM.closeWalletModalBtn;
+    
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    const newCloseBtn = closeBtn.cloneNode(true);
+    
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+    
+    DOM.walletModalConfirmBtn = newConfirmBtn;
+    DOM.walletModalCancelBtn = newCancelBtn;
+    DOM.closeWalletModalBtn = newCloseBtn;
+    
+    DOM.walletModalConfirmBtn.addEventListener("click", () => {
+        DOM.walletConfirmModal.classList.remove("active");
+        onConfirm();
+    });
+    
+    const dismiss = () => {
+        DOM.walletConfirmModal.classList.remove("active");
+    };
+    
+    DOM.walletModalCancelBtn.addEventListener("click", dismiss);
+    DOM.closeWalletModalBtn.addEventListener("click", dismiss);
+    DOM.walletConfirmModal.addEventListener("click", (e) => {
+        if (e.target === DOM.walletConfirmModal) dismiss();
+    });
+}
+
+async function connectAdminWallet() {
+    if (adminWeb3State.connectedAddress) {
+        disconnectAdminWallet();
+        return;
+    }
+
+    if (typeof window.ethereum === 'undefined') {
+        showWalletConfirmModal(
+            "No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?",
+            () => {
+                simulateAdminWalletConnection();
+            }
+        );
+        return;
+    }
+    
+    // Add a connection timeout fallback ONLY for automated/headless test runner environments
+    let connectionTimeout;
+    if (navigator.webdriver) {
+        connectionTimeout = setTimeout(() => {
+            showWalletConfirmModal(
+                "Wallet connection timed out. Would you like to connect in simulated Admin mode for testing?",
+                () => {
+                    simulateAdminWalletConnection();
+                }
+            );
+        }, 3000);
+    }
 
     try {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        clearTimeout(connectionTimeout);
+        if (connectionTimeout) clearTimeout(connectionTimeout);
         if (accounts.length > 0) {
             await handleAdminWalletConnected(accounts[0]);
         }
     } catch (err) {
-        clearTimeout(connectionTimeout);
+        if (connectionTimeout) clearTimeout(connectionTimeout);
         console.error("Wallet connection failed:", err);
-        const confirmSimulate = confirm("Wallet connection rejected. Would you like to connect in simulated Admin mode for testing?");
-        if (confirmSimulate) {
-            simulateAdminWalletConnection();
-        } else {
-            showToast("Connection rejected!");
-        }
+        showWalletConfirmModal(
+            "Wallet connection rejected. Would you like to connect in simulated Admin mode for testing?",
+            () => {
+                simulateAdminWalletConnection();
+            }
+        );
     }
+}
+
+function disconnectAdminWallet() {
+    adminWeb3State.connectedAddress = null;
+    adminWeb3State.provider = null;
+    adminWeb3State.signer = null;
+    adminWeb3State.contractWrite = null;
+    
+    updateAdminWalletUI();
+    refreshAdminContractStats();
+    showToast("Wallet disconnected.");
 }
 
 async function handleAdminWalletConnected(addr) {
@@ -730,6 +848,15 @@ async function handleAdminWalletConnected(addr) {
     adminWeb3State.contractWrite = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, adminWeb3State.signer);
     
     updateAdminWalletUI();
+    refreshAdminContractStats();
+}
+
+function formatTimeRemaining(seconds) {
+    if (seconds <= 0) return "0s";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}h ${m}m ${s}s`;
 }
 
 function updateAdminWalletUI() {
@@ -756,15 +883,25 @@ function updateAdminWalletUI() {
         if (headerConnectBtn) headerConnectBtn.classList.add("wallet-connected");
         
         if (executeBtn && statusText) {
-            const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
-            if (isOwner) {
-                executeBtn.disabled = false;
-                statusText.innerText = "Verified Owner Signature. Daily emissions protocol unlocked.";
-                statusText.style.color = "var(--success)";
+            const lastMiningTimeSec = adminWeb3State.lastMiningTimeSec || Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || "0") / 1000);
+            const nowSec = Math.floor(Date.now() / 1000);
+            const timeRemaining = (Number(lastMiningTimeSec) + 86400) - nowSec;
+            const alreadyExecuted = timeRemaining > 0;
+            
+            executeBtn.disabled = false;
+            executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+            executeBtn.className = "btn btn-primary btn-glow";
+            executeBtn.style.boxShadow = "";
+            
+            if (alreadyExecuted) {
+                statusText.innerText = `Daily emissions already executed on-chain. Next unlock in ${formatTimeRemaining(timeRemaining)}. You can still attempt to call the contract directly.`;
+                statusText.style.color = "var(--text-muted)";
             } else {
-                executeBtn.disabled = true;
-                statusText.innerText = `Connected address is not the contract owner. Access Denied.`;
-                statusText.style.color = "var(--danger)";
+                const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+                statusText.innerText = isOwner 
+                    ? "Verified Owner Wallet. Daily emissions protocol unlocked."
+                    : "Verified Wallet Connection. Daily emissions protocol unlocked (No onlyOwner restriction).";
+                statusText.style.color = "var(--success)";
             }
         }
     } else {
@@ -777,7 +914,8 @@ function updateAdminWalletUI() {
         
         if (executeBtn && statusText) {
             executeBtn.disabled = true;
-            statusText.innerText = "Wallet not connected. Connect the contract owner wallet to verify privileges.";
+            executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+            statusText.innerText = "Wallet not connected. Connect a wallet to execute mining emissions.";
             statusText.style.color = "var(--text-muted)";
         }
     }
@@ -799,6 +937,73 @@ function simulateAdminWalletConnection() {
     };
     updateAdminWalletUI();
     showToast("Connected in Admin Simulation Mode!");
+}
+
+async function refreshAdminContractStats() {
+    const minedVal = document.getElementById("adminMinedVal");
+    const minedProgress = document.getElementById("adminMinedProgress");
+    const percentText = document.getElementById("adminMinedPercentText");
+    const lockedVal = document.getElementById("adminLockedVal");
+    const timestampVal = document.getElementById("adminTimestampVal");
+    
+    if (!minedVal) return;
+    
+    // Find start of today in local time (12:00 AM)
+    const nowLocalDate = new Date();
+    const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
+    
+    // Days elapsed since genesis (excluding today)
+    const daysElapsed = Math.max(0, Math.floor((startOfToday - 1711843200000) / (24 * 60 * 60 * 1000))); // Genesis time
+    
+    // Check if daily execution was triggered today in mockup
+    const todayStr = nowLocalDate.toDateString();
+    const executedToday = localStorage.getItem("elonix_daily_executed_date") === todayStr;
+    
+    // Default fallback values
+    let totalMined = (daysElapsed * 100) + (executedToday ? 100 : 0);
+    let lastMiningTimeSec = Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || String(startOfToday)) / 1000);
+    
+    // Attempt to read from the real contract if BSC Provider is available
+    try {
+        let provider;
+        if (adminWeb3State.provider) {
+            provider = adminWeb3State.provider;
+        } else if (window.ethereum) {
+            provider = new ethers.BrowserProvider(window.ethereum);
+        } else {
+            provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
+        }
+        
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const totalMinedWei = await contract.totalMinedTokens();
+        const lastMiningTime = await contract.lastMiningTime();
+        
+        totalMined = parseFloat(ethers.formatEther(totalMinedWei));
+        lastMiningTimeSec = Number(lastMiningTime);
+        adminWeb3State.lastMiningTimeSec = lastMiningTimeSec;
+    } catch (e) {
+        console.warn("Failed to fetch real contract stats inside Admin, using local state fallback:", e);
+    }
+    
+    const maxSupply = 182500;
+    const remainingLocked = Math.max(0, maxSupply - totalMined);
+    const percentage = (totalMined / maxSupply) * 100;
+    
+    // Update DOM
+    const formatNumberWithCommas = (x) => x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span style="font-size: 0.9rem; color: var(--text-muted);">ELX</span>`;
+    if (minedProgress) minedProgress.style.width = `${Math.max(1, percentage)}%`;
+    if (percentText) percentText.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+    if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span style="font-size: 0.9rem; color: var(--text-muted);">ELX</span>`;
+    if (timestampVal) {
+        const lastMiningDate = new Date(lastMiningTimeSec * 1000);
+        timestampVal.innerText = lastMiningDate.toLocaleString();
+    }
+    
+    // Refresh button and status fields with the latest time data
+    if (adminWeb3State.connectedAddress) {
+        updateAdminWalletUI();
+    }
 }
 
 // ----------------------------------------------------

@@ -277,6 +277,33 @@
                                 Wallet not connected. Connect the contract owner wallet to verify privileges.
                             </p>
                         </div>
+
+                        <!-- Real Live Mining Data Card Display inside Admin Console -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <div class="dashboard-card card-glow" style="padding: 1.5rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Emissions Pool Supply</div>
+                                <div class="font-tech text-cyan" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem;">182,500 <span style="font-size: 0.9rem; color: var(--text-muted);">ELX</span></div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">Fixed protocol pool cap</span>
+                            </div>
+                            <div class="dashboard-card card-glow" style="padding: 1.5rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Tokens Mined So Far</div>
+                                <div class="font-tech text-cyan" id="adminMinedVal" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem;">-- <span style="font-size: 0.9rem; color: var(--text-muted);">ELX</span></div>
+                                <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; margin: 0.5rem 0; overflow: hidden;">
+                                    <div id="adminMinedProgress" style="width: 0%; height: 100%; background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan); transition: width 0.5s ease;"></div>
+                                </div>
+                                <span id="adminMinedPercentText" style="font-size: 0.75rem; color: var(--text-muted);">Loading contract data...</span>
+                            </div>
+                            <div class="dashboard-card card-glow" style="padding: 1.5rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Remaining Locked</div>
+                                <div class="font-tech text-cyan" id="adminLockedVal" style="font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem;">-- <span style="font-size: 0.9rem; color: var(--text-muted);">ELX</span></div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">Reserved emissions for daily releases</span>
+                            </div>
+                            <div class="dashboard-card card-glow" style="padding: 1.5rem;">
+                                <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 0.05em; text-transform: uppercase;">Last Mining Time</div>
+                                <div class="font-tech text-cyan" id="adminTimestampVal" style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.25rem; word-break: break-all;">--</div>
+                                <span style="font-size: 0.75rem; color: var(--text-muted);">Timestamp of last release block</span>
+                            </div>
+                        </div>
                     </div>
                     
                     <!-- SUB-VIEW 6: CLIENT DIRECTORY (CRM) -->
@@ -628,6 +655,26 @@
                     <button type="submit" class="btn btn-primary btn-glow" style="width: 100%;">Create Account</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Custom Wallet Simulation Confirmation Modal -->
+    <div id="walletConfirmModal" class="modal-overlay">
+        <div class="modal-card card-glow"
+            style="max-width: 450px; background: var(--bg-surface); border: 1px solid var(--border-titanium-hover); border-radius: 12px; padding: 2rem; width: 90%; margin: auto; position: relative;">
+            <div class="modal-header"
+                style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.2rem;">🌐 Web3 Connection Alert</h3>
+                <button id="closeWalletModalBtn" class="modal-close-x"
+                    style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="color: var(--text-primary); margin-bottom: 1.5rem; line-height: 1.5;">
+                <p id="walletModalMessage">No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?</p>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button id="walletModalCancelBtn" class="btn btn-secondary-glow btn-sm" style="padding: 0.5rem 1rem;">Cancel</button>
+                <button id="walletModalConfirmBtn" class="btn btn-cyan-glow btn-sm" style="padding: 0.5rem 1rem;">Simulate Mode</button>
+            </div>
         </div>
     </div>
 
