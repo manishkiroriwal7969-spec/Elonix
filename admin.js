@@ -22,6 +22,7 @@ const DOM = {
     ticketsList: document.getElementById("adminSupportTicketsList"),
     
     toast: document.getElementById("toast"),
+    headerConnectBtn: document.getElementById("adminHeaderConnectWalletBtn"),
     
     // KYC Audit Modal Elements
     kycAuditModal: document.getElementById("kycAuditModal"),
@@ -80,12 +81,14 @@ function showAuthScreen() {
     if (DOM.authContainer) DOM.authContainer.style.display = "block";
     if (DOM.dashboardContainer) DOM.dashboardContainer.style.display = "none";
     if (DOM.logoutBtn) DOM.logoutBtn.style.display = "none";
+    if (DOM.headerConnectBtn) DOM.headerConnectBtn.style.display = "none";
 }
 
 function showDashboardScreen() {
     if (DOM.authContainer) DOM.authContainer.style.display = "none";
     if (DOM.dashboardContainer) DOM.dashboardContainer.style.display = "block";
     if (DOM.logoutBtn) DOM.logoutBtn.style.display = "block";
+    if (DOM.headerConnectBtn) DOM.headerConnectBtn.style.display = "flex";
 }
 
 // Authentication
@@ -120,6 +123,12 @@ function setupAuthForm() {
             localStorage.removeItem("elonix_admin_session");
             showAuthScreen();
             showToast("Terminal session closed successfully.");
+        });
+    }
+    
+    if (DOM.headerConnectBtn) {
+        DOM.headerConnectBtn.addEventListener("click", () => {
+            connectAdminWallet();
         });
     }
 }
@@ -623,31 +632,7 @@ function initAdminMiningTab() {
     if (adminMiningListenersBound) return;
     adminMiningListenersBound = true;
     
-    connectBtn.addEventListener("click", async () => {
-        if (typeof window.ethereum === 'undefined') {
-            const confirmSimulate = confirm("No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?");
-            if (confirmSimulate) {
-                simulateAdminWalletConnection();
-            } else {
-                showToast("Please install MetaMask!");
-            }
-            return;
-        }
-        try {
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            if (accounts.length > 0) {
-                await handleAdminWalletConnected(accounts[0]);
-            }
-        } catch (err) {
-            console.error("Wallet connection failed:", err);
-            const confirmSimulate = confirm("Wallet connection rejected. Would you like to connect in simulated Admin mode for testing?");
-            if (confirmSimulate) {
-                simulateAdminWalletConnection();
-            } else {
-                showToast("Connection rejected!");
-            }
-        }
-    });
+    connectBtn.addEventListener("click", connectAdminWallet);
 
     executeBtn.addEventListener("click", async () => {
         if (!adminWeb3State.contractWrite || !adminWeb3State.connectedAddress) {
@@ -701,6 +686,43 @@ function initAdminMiningTab() {
     }
 }
 
+async function connectAdminWallet() {
+    if (typeof window.ethereum === 'undefined') {
+        const confirmSimulate = confirm("No Web3 wallet extension detected. Would you like to connect in simulated Admin mode for testing?");
+        if (confirmSimulate) {
+            simulateAdminWalletConnection();
+        } else {
+            showToast("Please install MetaMask!");
+        }
+        return;
+    }
+    
+    // Add a connection timeout fallback for automated/headless environments
+    let connectionTimeout = setTimeout(() => {
+        const confirmSimulate = confirm("Wallet connection timed out. Would you like to connect in simulated Admin mode for testing?");
+        if (confirmSimulate) {
+            simulateAdminWalletConnection();
+        }
+    }, 3000);
+
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        clearTimeout(connectionTimeout);
+        if (accounts.length > 0) {
+            await handleAdminWalletConnected(accounts[0]);
+        }
+    } catch (err) {
+        clearTimeout(connectionTimeout);
+        console.error("Wallet connection failed:", err);
+        const confirmSimulate = confirm("Wallet connection rejected. Would you like to connect in simulated Admin mode for testing?");
+        if (confirmSimulate) {
+            simulateAdminWalletConnection();
+        } else {
+            showToast("Connection rejected!");
+        }
+    }
+}
+
 async function handleAdminWalletConnected(addr) {
     adminWeb3State.connectedAddress = addr;
     adminWeb3State.provider = new ethers.BrowserProvider(window.ethereum);
@@ -717,29 +739,47 @@ function updateAdminWalletUI() {
     const indicator = document.getElementById("adminWalletIndicator");
     const connectText = document.getElementById("adminConnectWalletText");
     
-    if (!connectBtn || !executeBtn || !statusText) return;
+    // Header elements
+    const headerConnectBtn = document.getElementById("adminHeaderConnectWalletBtn");
+    const headerIndicator = document.getElementById("adminHeaderWalletIndicator");
+    const headerConnectText = document.getElementById("adminHeaderConnectWalletText");
     
-    if (adminWeb3State.connectedAddress) {
-        const addr = adminWeb3State.connectedAddress;
-        if (connectText) connectText.innerText = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    const addr = adminWeb3State.connectedAddress;
+    
+    if (addr) {
+        const shortAddr = `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+        if (connectText) connectText.innerText = shortAddr;
         if (indicator) indicator.style.backgroundColor = "var(--success)";
         
-        const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
-        if (isOwner) {
-            executeBtn.disabled = false;
-            statusText.innerText = "Verified Owner Signature. Daily emissions protocol unlocked.";
-            statusText.style.color = "var(--success)";
-        } else {
-            executeBtn.disabled = true;
-            statusText.innerText = `Connected address is not the contract owner. Access Denied.`;
-            statusText.style.color = "var(--danger)";
+        if (headerConnectText) headerConnectText.innerText = shortAddr;
+        if (headerIndicator) headerIndicator.style.backgroundColor = "var(--success)";
+        if (headerConnectBtn) headerConnectBtn.classList.add("wallet-connected");
+        
+        if (executeBtn && statusText) {
+            const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+            if (isOwner) {
+                executeBtn.disabled = false;
+                statusText.innerText = "Verified Owner Signature. Daily emissions protocol unlocked.";
+                statusText.style.color = "var(--success)";
+            } else {
+                executeBtn.disabled = true;
+                statusText.innerText = `Connected address is not the contract owner. Access Denied.`;
+                statusText.style.color = "var(--danger)";
+            }
         }
     } else {
         if (connectText) connectText.innerText = "Connect Admin Wallet";
         if (indicator) indicator.style.backgroundColor = "#94a3b8";
-        executeBtn.disabled = true;
-        statusText.innerText = "Wallet not connected. Connect the contract owner wallet to verify privileges.";
-        statusText.style.color = "var(--text-muted)";
+        
+        if (headerConnectText) headerConnectText.innerText = "Connect Wallet";
+        if (headerIndicator) headerIndicator.style.backgroundColor = "#94a3b8";
+        if (headerConnectBtn) headerConnectBtn.classList.remove("wallet-connected");
+        
+        if (executeBtn && statusText) {
+            executeBtn.disabled = true;
+            statusText.innerText = "Wallet not connected. Connect the contract owner wallet to verify privileges.";
+            statusText.style.color = "var(--text-muted)";
+        }
     }
 }
 
