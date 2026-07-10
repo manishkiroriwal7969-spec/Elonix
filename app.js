@@ -21,6 +21,7 @@ let appState = {
     contractWrite: null,
     totalMined: 0,
     lastMiningTime: 0,
+    loadedFromContract: false,
     
     // Web Miner State
     isMining: false,
@@ -190,6 +191,25 @@ async function initPublicData() {
     // Only run if public stats elements are on this page
     if (!minedVal && !lockedVal && !timestampVal) return;
 
+    try {
+        let provider;
+        if (appState.provider) {
+            provider = appState.provider;
+        } else {
+            provider = new ethers.JsonRpcProvider(BSC_RPC_URL);
+        }
+        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+        const totalMinedWei = await contract.totalMinedTokens();
+        const lastMiningTimeSec = await contract.lastMiningTime();
+
+        appState.totalMined = parseFloat(ethers.formatEther(totalMinedWei));
+        appState.lastMiningTime = Number(lastMiningTimeSec);
+        appState.loadedFromContract = true;
+    } catch (e) {
+        console.warn("Failed to fetch public contract stats, falling back to mockup:", e);
+        appState.loadedFromContract = false;
+    }
+
     // Start Live Emissions Ticker for real-time progress preview
     startLiveEmissionsTicker();
 }
@@ -201,44 +221,65 @@ function startLiveEmissionsTicker() {
     emissionsTickerStarted = true;
 
     const updateStats = () => {
-        // Genesis point: June 28, 2026 UTC
-        const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
-        const now = Date.now();
-        
-        // Find start of today in local time (12:00 AM)
-        const nowLocalDate = new Date();
-        const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
-        
-        // Days elapsed since genesis
-        const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
-        const baseMined = daysElapsed * 100;
-        
-        // Mined today
-        const msPassedToday = now - startOfToday;
-        const currentDayMined = Math.min(100, Math.max(0, (msPassedToday / (24 * 60 * 60 * 1000)) * 100));
-        
-        const totalMined = baseMined + currentDayMined;
-        const maxSupply = 182500;
-        const remainingLocked = Math.max(0, maxSupply - totalMined);
-        const percentage = (totalMined / maxSupply) * 100;
-        
-        // Update DOM elements
-        if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
-        if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
-        
-        if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
-        if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
-        
-        if (timestampVal) {
-            const lastMiningDate = new Date(startOfToday);
-            timestampVal.innerText = formatLocalDate(lastMiningDate);
+        let totalMined = 0;
+        let remainingLocked = 0;
+        let percentage = 0;
+        let maxSupply = 182500;
+
+        if (appState.loadedFromContract) {
+            const nowSec = Math.floor(Date.now() / 1000);
+            const elapsed = Math.max(0, nowSec - appState.lastMiningTime);
+            const accrued = Math.min(100, elapsed * (100 / 86400));
+            totalMined = appState.totalMined + accrued;
+            remainingLocked = Math.max(0, maxSupply - totalMined);
+            percentage = (totalMined / maxSupply) * 100;
+
+            if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+            if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+            if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+            if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+            if (timestampVal) {
+                const lastMiningDate = new Date(appState.lastMiningTime * 1000);
+                timestampVal.innerText = formatLocalDate(lastMiningDate);
+            }
+        } else {
+            // Genesis point: June 28, 2026 UTC
+            const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+            const now = Date.now();
+            
+            // Find start of today in local time (12:00 AM)
+            const nowLocalDate = new Date();
+            const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
+            
+            // Days elapsed since genesis
+            const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
+            const baseMined = daysElapsed * 100;
+            
+            // Mined today
+            const msPassedToday = now - startOfToday;
+            const currentDayMined = Math.min(100, Math.max(0, (msPassedToday / (24 * 60 * 60 * 1000)) * 100));
+            
+            totalMined = baseMined + currentDayMined;
+            remainingLocked = Math.max(0, maxSupply - totalMined);
+            percentage = (totalMined / maxSupply) * 100;
+
+            if (minedVal) minedVal.innerHTML = `${formatNumberWithCommas(totalMined.toFixed(6))} <span class="val-unit">ELX</span>`;
+            if (lockedVal) lockedVal.innerHTML = `${formatNumberWithCommas(remainingLocked.toFixed(6))} <span class="val-unit">ELX</span>`;
+            if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
+            if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
+            if (timestampVal) {
+                const lastMiningDate = new Date(startOfToday);
+                timestampVal.innerText = formatLocalDate(lastMiningDate);
+            }
         }
-        
+
         if (minedPulse) {
             minedPulse.classList.add("display-pulse");
             minedPulse.style.backgroundColor = "var(--cyan)";
             minedPulse.style.boxShadow = "0 0 10px var(--cyan)";
         }
+
+        updateExecuteButtonState();
     };
     
     updateStats();
@@ -264,6 +305,11 @@ async function refreshContractStats() {
         const lastMiningTimeSec = await contract.lastMiningTime();
         
         const totalMined = parseFloat(ethers.formatEther(totalMinedWei));
+        
+        appState.totalMined = totalMined;
+        appState.lastMiningTime = Number(lastMiningTimeSec);
+        appState.loadedFromContract = true;
+
         const maxSupply = 182500;
         const remainingLocked = Math.max(0, maxSupply - totalMined);
         const percentage = (totalMined / maxSupply) * 100;
@@ -311,6 +357,71 @@ function formatNumberWithCommas(x) {
     const parts = x.toString().split(".");
     parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     return parts.join(".");
+}
+
+// Utility: Format time remaining in H M S
+function formatTimeRemaining(seconds) {
+    if (seconds <= 0) return "0s";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}h ${m}m ${s}s`;
+}
+
+// Update execute button state dynamically
+function updateExecuteButtonState() {
+    if (!executeMiningBtn) return;
+    
+    if (appState.connectedAddress) {
+        const isOwner = appState.connectedAddress.toLowerCase() === OWNER_ADDRESS.toLowerCase();
+        if (!isOwner) {
+            executeMiningBtn.disabled = true;
+            executeMiningBtn.classList.remove("btn-glow");
+            if (miningBtnTooltip) {
+                miningBtnTooltip.innerText = "Only the contract owner can execute daily mining";
+            }
+        } else {
+            let lastTime = 0;
+            if (appState.loadedFromContract) {
+                lastTime = appState.lastMiningTime;
+            } else {
+                const executedToday = localStorage.getItem("elonix_daily_executed_date") === new Date().toDateString();
+                if (executedToday) {
+                    lastTime = Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || "0") / 1000);
+                }
+            }
+            
+            if (lastTime > 0) {
+                const nowSec = Math.floor(Date.now() / 1000);
+                const timeRemaining = (lastTime + 86400) - nowSec;
+                if (timeRemaining > 0) {
+                    executeMiningBtn.disabled = true;
+                    executeMiningBtn.classList.remove("btn-glow");
+                    if (miningBtnTooltip) {
+                        miningBtnTooltip.innerText = `Daily emissions already executed. Next unlock in ${formatTimeRemaining(timeRemaining)}`;
+                    }
+                } else {
+                    executeMiningBtn.disabled = false;
+                    executeMiningBtn.classList.add("btn-glow");
+                    if (miningBtnTooltip) {
+                        miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
+                    }
+                }
+            } else {
+                executeMiningBtn.disabled = false;
+                executeMiningBtn.classList.add("btn-glow");
+                if (miningBtnTooltip) {
+                    miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
+                }
+            }
+        }
+    } else {
+        executeMiningBtn.disabled = true;
+        executeMiningBtn.classList.remove("btn-glow");
+        if (miningBtnTooltip) {
+            miningBtnTooltip.innerText = "Connect wallet of contract owner to execute";
+        }
+    }
 }
 
 // Fallback Mockup Data in case BSC RPC is entirely offline
@@ -500,13 +611,7 @@ function disconnectWalletState() {
 
 // Check if user is owner and adjust button states accordingly
 function checkOwnerPrivileges(address) {
-    if (!executeMiningBtn) return;
-    
-    executeMiningBtn.disabled = false;
-    executeMiningBtn.classList.add("btn-glow");
-    if (miningBtnTooltip) {
-        miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
-    }
+    updateExecuteButtonState();
 }
 
 // Trigger Smart Contract emission distribution

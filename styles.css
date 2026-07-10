@@ -3485,6 +3485,51 @@ h1, h2, h3, h4 {
     }
 }
 
+/* Premium Client Panel Glassmorphic Buttons */
+.btn-deposit {
+    background: rgba(16, 185, 129, 0.06) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    color: #34d399 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.05) !important;
+    text-shadow: 0 0 8px rgba(16, 185, 129, 0.25) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-deposit:hover {
+    background: rgba(16, 185, 129, 0.14) !important;
+    border-color: #10b981 !important;
+    color: #6ee7b7 !important;
+    box-shadow: 0 0 18px rgba(16, 185, 129, 0.3) !important;
+    transform: translateY(-2px);
+}
+
+.btn-deposit:active {
+    transform: translateY(0);
+}
+
+.btn-logout {
+    background: rgba(239, 68, 68, 0.06) !important;
+    border: 1px solid rgba(239, 68, 68, 0.35) !important;
+    color: #f87171 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.05) !important;
+    text-shadow: 0 0 8px rgba(239, 68, 68, 0.25) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.btn-logout:hover {
+    background: rgba(239, 68, 68, 0.14) !important;
+    border-color: #ef4444 !important;
+    color: #fca5a5 !important;
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.3) !important;
+    transform: translateY(-2px);
+}
+
+.btn-logout:active {
+    transform: translateY(0);
+}
+
 
 
 

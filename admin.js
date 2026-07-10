@@ -816,6 +816,45 @@ async function connectAdminWallet() {
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         if (connectionTimeout) clearTimeout(connectionTimeout);
         if (accounts.length > 0) {
+            // Verify we are on BNB Smart Chain (BSC)
+            const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (currentChainId !== "0x38") {
+                try {
+                    // Try switching to BSC
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: "0x38" }],
+                    });
+                } catch (switchError) {
+                    // If chain is not added, prompt to add it
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: "0x38",
+                                    chainName: "BNB Smart Chain",
+                                    rpcUrls: ["https://bsc-dataseed.binance.org/"],
+                                    nativeCurrency: {
+                                        name: "BNB",
+                                        symbol: "BNB",
+                                        decimals: 18
+                                    },
+                                    blockExplorerUrls: ["https://bscscan.com"]
+                                }],
+                            });
+                        } catch (addError) {
+                            console.error("Failed to add BSC Chain:", addError);
+                            showToast("Failed to add BNB Smart Chain to MetaMask.");
+                            return;
+                        }
+                    } else {
+                        console.error("Failed to switch to BSC Chain:", switchError);
+                        showToast("Please switch MetaMask network to BNB Smart Chain.");
+                        return;
+                    }
+                }
+            }
             await handleAdminWalletConnected(accounts[0]);
         }
     } catch (err) {
@@ -888,20 +927,29 @@ function updateAdminWalletUI() {
             const timeRemaining = (Number(lastMiningTimeSec) + 86400) - nowSec;
             const alreadyExecuted = timeRemaining > 0;
             
-            executeBtn.disabled = false;
-            executeBtn.innerText = "Execute Daily Mining (100 ELX)";
-            executeBtn.className = "btn btn-primary btn-glow";
-            executeBtn.style.boxShadow = "";
-            
             if (alreadyExecuted) {
-                statusText.innerText = `Daily emissions already executed on-chain. Next unlock in ${formatTimeRemaining(timeRemaining)}. You can still attempt to call the contract directly.`;
+                executeBtn.disabled = true;
+                executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+                executeBtn.className = "btn btn-secondary";
+                executeBtn.style.boxShadow = "none";
+                statusText.innerText = `Daily emissions already executed on-chain. Next unlock in ${formatTimeRemaining(timeRemaining)}.`;
                 statusText.style.color = "var(--text-muted)";
             } else {
                 const isOwner = addr.toLowerCase() === OWNER_ADDRESS.toLowerCase();
-                statusText.innerText = isOwner 
-                    ? "Verified Owner Wallet. Daily emissions protocol unlocked."
-                    : "Verified Wallet Connection. Daily emissions protocol unlocked (No onlyOwner restriction).";
-                statusText.style.color = "var(--success)";
+                if (isOwner) {
+                    executeBtn.disabled = false;
+                    executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+                    executeBtn.className = "btn btn-primary btn-glow";
+                    statusText.innerText = "Verified Owner Wallet. Daily emissions protocol unlocked.";
+                    statusText.style.color = "var(--success)";
+                } else {
+                    executeBtn.disabled = true;
+                    executeBtn.innerText = "Execute Daily Mining (100 ELX)";
+                    executeBtn.className = "btn btn-secondary";
+                    executeBtn.style.boxShadow = "none";
+                    statusText.innerText = "Connected wallet is not the owner. Daily emissions protocol locked.";
+                    statusText.style.color = "#ef4444";
+                }
             }
         }
     } else {
@@ -953,7 +1001,8 @@ async function refreshAdminContractStats() {
     const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
     
     // Days elapsed since genesis (excluding today)
-    const daysElapsed = Math.max(0, Math.floor((startOfToday - 1711843200000) / (24 * 60 * 60 * 1000))); // Genesis time
+    const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+    const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000))); // Genesis time
     
     // Check if daily execution was triggered today in mockup
     const todayStr = nowLocalDate.toDateString();
@@ -981,6 +1030,12 @@ async function refreshAdminContractStats() {
         totalMined = parseFloat(ethers.formatEther(totalMinedWei));
         lastMiningTimeSec = Number(lastMiningTime);
         adminWeb3State.lastMiningTimeSec = lastMiningTimeSec;
+
+        // Real-time elapsed accrual to match app.js live emissions ticker
+        const nowSec = Math.floor(Date.now() / 1000);
+        const elapsed = Math.max(0, nowSec - lastMiningTimeSec);
+        const accrued = Math.min(100, elapsed * (100 / 86400));
+        totalMined = totalMined + accrued;
     } catch (e) {
         console.warn("Failed to fetch real contract stats inside Admin, using local state fallback:", e);
     }
