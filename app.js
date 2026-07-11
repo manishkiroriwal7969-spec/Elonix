@@ -2,7 +2,7 @@
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";
 const BSC_CHAIN_ID = "0x38"; // 56 in decimal
-const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+const BSC_RPC_URL = "https://rpc.ankr.com/bsc";
 
 // Contract ABI (view functions + state change function)
 const CONTRACT_ABI = [
@@ -243,23 +243,13 @@ function startLiveEmissionsTicker() {
                 timestampVal.innerText = formatLocalDate(lastMiningDate);
             }
         } else {
-            // Genesis point: June 28, 2026 UTC
-            const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
             const now = Date.now();
+            const lastExecutionTime = parseInt(localStorage.getItem("elonix_daily_executed_time") || "1783368267000");
+            const elapsed = Math.max(0, Math.floor((now - lastExecutionTime) / 1000));
+            const accrued = Math.min(100, elapsed * (100 / 86400));
             
-            // Find start of today in local time (12:00 AM)
-            const nowLocalDate = new Date();
-            const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
-            
-            // Days elapsed since genesis
-            const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
-            const baseMined = daysElapsed * 100;
-            
-            // Mined today
-            const msPassedToday = now - startOfToday;
-            const currentDayMined = Math.min(100, Math.max(0, (msPassedToday / (24 * 60 * 60 * 1000)) * 100));
-            
-            totalMined = baseMined + currentDayMined;
+            const baseMined = parseInt(localStorage.getItem("elonix_mock_total_mined") || "700");
+            totalMined = baseMined + accrued;
             remainingLocked = Math.max(0, maxSupply - totalMined);
             percentage = (totalMined / maxSupply) * 100;
 
@@ -268,8 +258,7 @@ function startLiveEmissionsTicker() {
             if (progressBar) progressBar.style.width = `${Math.max(1, percentage)}%`;
             if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
             if (timestampVal) {
-                const lastMiningDate = new Date(startOfToday);
-                timestampVal.innerText = formatLocalDate(lastMiningDate);
+                timestampVal.innerText = formatLocalDate(new Date(lastExecutionTime));
             }
         }
 
@@ -385,31 +374,35 @@ function updateExecuteButtonState() {
             if (appState.loadedFromContract) {
                 lastTime = appState.lastMiningTime;
             } else {
-                const executedToday = localStorage.getItem("elonix_daily_executed_date") === new Date().toDateString();
-                if (executedToday) {
-                    lastTime = Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || "0") / 1000);
+                lastTime = Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || "1783368267000") / 1000);
+            }
+            
+            let alreadyExecuted = false;
+            let timeRemaining = 0;
+            if (lastTime > 0) {
+                const lastMiningDate = new Date(lastTime * 1000);
+                const currentDate = new Date();
+                const isSameDate = lastMiningDate.getFullYear() === currentDate.getFullYear() &&
+                                   lastMiningDate.getMonth() === currentDate.getMonth() &&
+                                   lastMiningDate.getDate() === currentDate.getDate();
+                if (isSameDate) {
+                    alreadyExecuted = true;
+                    const tomorrow = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate() + 1);
+                    timeRemaining = Math.max(0, Math.floor((tomorrow.getTime() - currentDate.getTime()) / 1000));
                 }
             }
             
-            if (lastTime > 0) {
-                const nowSec = Math.floor(Date.now() / 1000);
-                const timeRemaining = (lastTime + 86400) - nowSec;
-                if (timeRemaining > 0) {
-                    executeMiningBtn.disabled = true;
-                    executeMiningBtn.classList.remove("btn-glow");
-                    if (miningBtnTooltip) {
-                        miningBtnTooltip.innerText = `Daily emissions already executed. Next unlock in ${formatTimeRemaining(timeRemaining)}`;
-                    }
-                } else {
-                    executeMiningBtn.disabled = false;
-                    executeMiningBtn.classList.add("btn-glow");
-                    if (miningBtnTooltip) {
-                        miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
-                    }
+            if (alreadyExecuted) {
+                executeMiningBtn.disabled = true;
+                executeMiningBtn.classList.remove("btn-glow");
+                executeMiningBtn.innerText = `Locked: ${formatTimeRemaining(timeRemaining)}`;
+                if (miningBtnTooltip) {
+                    miningBtnTooltip.innerText = `Daily emissions already executed today. Next unlock in ${formatTimeRemaining(timeRemaining)}`;
                 }
             } else {
                 executeMiningBtn.disabled = false;
                 executeMiningBtn.classList.add("btn-glow");
+                executeMiningBtn.innerText = "Execute Daily Mining";
                 if (miningBtnTooltip) {
                     miningBtnTooltip.innerText = "Trigger the daily 100 ELX emission lock release";
                 }
@@ -426,20 +419,13 @@ function updateExecuteButtonState() {
 
 // Fallback Mockup Data in case BSC RPC is entirely offline
 function applyMockupStats() {
-    const GENESIS_TIME = new Date("2026-06-28T00:00:00Z").getTime();
+    const now = Date.now();
+    const lastExecutionTime = parseInt(localStorage.getItem("elonix_daily_executed_time") || "1783368267000");
+    const elapsed = Math.max(0, Math.floor((now - lastExecutionTime) / 1000));
+    const accrued = Math.min(100, elapsed * (100 / 86400));
     
-    // Find start of today in local time (12:00 AM)
-    const nowLocalDate = new Date();
-    const startOfToday = new Date(nowLocalDate.getFullYear(), nowLocalDate.getMonth(), nowLocalDate.getDate(), 0, 0, 0, 0).getTime();
-    
-    // Days elapsed since genesis (excluding today)
-    const daysElapsed = Math.max(0, Math.floor((startOfToday - GENESIS_TIME) / (24 * 60 * 60 * 1000)));
-    
-    // Check if daily execution was triggered today in mockup
-    const todayStr = nowLocalDate.toDateString();
-    const executedToday = localStorage.getItem("elonix_daily_executed_date") === todayStr;
-    
-    const totalMined = (daysElapsed * 100) + (executedToday ? 100 : 0);
+    const baseMined = parseInt(localStorage.getItem("elonix_mock_total_mined") || "700");
+    const totalMined = baseMined + accrued;
     const maxSupply = 182500;
     const remainingLocked = Math.max(0, maxSupply - totalMined);
     const percentage = (totalMined / maxSupply) * 100;
@@ -451,13 +437,7 @@ function applyMockupStats() {
     if (progressPercentage) progressPercentage.innerText = `${percentage.toFixed(6)}% mined from emissions pool.`;
     
     if (timestampVal) {
-        if (executedToday) {
-            const execTime = localStorage.getItem("elonix_daily_executed_time");
-            timestampVal.innerText = formatLocalDate(new Date(parseInt(execTime || startOfToday)));
-        } else {
-            const yesterdayStart = new Date(startOfToday - 24 * 60 * 60 * 1000);
-            timestampVal.innerText = formatLocalDate(yesterdayStart);
-        }
+        timestampVal.innerText = formatLocalDate(new Date(lastExecutionTime));
     }
     
     if (minedPulse) {

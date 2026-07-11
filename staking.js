@@ -3,7 +3,7 @@
 // Contract & Public Stats configuration
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const BSC_CHAIN_ID = "0x38";
-const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
+const BSC_RPC_URL = "https://rpc.ankr.com/bsc";
 
 // Staking Pools Configuration
 const STAKING_POOLS = {
@@ -29,13 +29,13 @@ const STAKING_POOLS = {
     },
     singularity: {
         id: "singularity",
-        name: "Singularity Matrix (365d)",
+        name: "Singularity Matrix (300d)",
         apy: 42.0,
         monthlyRate: 3.5,
-        lockDays: 365,
+        lockDays: 300,
         minStake: 100,
         badgeClass: "badge-singularity",
-        desc: "365-day validation lock. Monthly profit of 3.5% on deposited ELX plus 3.5% on mined/welcome bonus ELX."
+        desc: "300-day validation lock. Monthly profit of 3.5% on deposited ELX plus 3.5% on mined/welcome bonus ELX."
     }
 };
 
@@ -312,6 +312,17 @@ window.addEventListener("DOMContentLoaded", () => {
         }
     } else {
         showAuthScreen();
+        
+        // Auto-fill referral field from URL query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const refParam = urlParams.get('ref');
+        if (refParam) {
+            const refInput = document.getElementById("regReferrer");
+            if (refInput) {
+                refInput.value = refParam.trim();
+                if (UI.registerTab) UI.registerTab.click();
+            }
+        }
     }
     
     initTiltEffect();
@@ -339,11 +350,13 @@ function cacheDOMSelectors() {
     UI.tabBtnStaking = document.getElementById("tabBtnStaking");
     UI.tabBtnMiner = document.getElementById("tabBtnMiner");
     UI.tabBtnProfile = document.getElementById("tabBtnProfile");
+    UI.tabBtnReferrals = document.getElementById("tabBtnReferrals");
     UI.tabBtnWithdraw = document.getElementById("tabBtnWithdraw");
     UI.tabBtnSupport = document.getElementById("tabBtnSupport");
     UI.stakingHubView = document.getElementById("stakingHubView");
     UI.webMinerView = document.getElementById("webMinerView");
     UI.profileKycView = document.getElementById("profileKycView");
+    UI.referralsView = document.getElementById("referralsView");
     UI.withdrawView = document.getElementById("withdrawView");
     UI.supportView = document.getElementById("supportView");
     
@@ -449,6 +462,7 @@ function setupDashboardTabs() {
         { btn: UI.tabBtnStaking, view: UI.stakingHubView, hash: "staking" },
         { btn: UI.tabBtnMiner, view: UI.webMinerView, hash: "miner" },
         { btn: UI.tabBtnProfile, view: UI.profileKycView, hash: "profile" },
+        { btn: UI.tabBtnReferrals, view: UI.referralsView, hash: "referrals" },
         { btn: UI.tabBtnWithdraw, view: UI.withdrawView, hash: "withdraw" },
         { btn: UI.tabBtnSupport, view: UI.supportView, hash: "support" }
     ];
@@ -488,6 +502,8 @@ function setupDashboardTabs() {
                             renderWithdrawalState(user);
                         } else if (tab.hash === "support") {
                             renderSupportTickets(user);
+                        } else if (tab.hash === "referrals") {
+                            renderReferralsNetworkView(user);
                         }
                     }
                 }
@@ -538,6 +554,7 @@ function setupAuthSubmits() {
             const email = document.getElementById("regEmail").value.trim();
             const pass = document.getElementById("regPassword").value;
             const confirmPass = document.getElementById("regConfirmPassword").value;
+            const referrerVal = document.getElementById("regReferrer") ? document.getElementById("regReferrer").value.trim() : "";
             
             if (!username || !email || !pass || !confirmPass) {
                 setAuthError("Please fill out all fields.");
@@ -569,6 +586,19 @@ function setupAuthSubmits() {
                 return;
             }
             
+            let referrerUsername = "";
+            if (referrerVal) {
+                if (referrerVal.toLowerCase() === username.toLowerCase()) {
+                    setAuthError("You cannot refer yourself.");
+                    return;
+                }
+                if (!usersData[referrerVal.toLowerCase()]) {
+                    setAuthError("Referrer username does not exist.");
+                    return;
+                }
+                referrerUsername = usersData[referrerVal.toLowerCase()].username;
+            }
+            
             // Create user object with balance and miningBalance
             const newUser = {
                 username: username,
@@ -580,6 +610,11 @@ function setupAuthSubmits() {
                 sharesFound: 0,
                 walletLinked: null,
                 stakes: [],
+                referrer: referrerUsername,
+                referralIncome: 0,
+                roiLevelIncome: 0,
+                cumulativeEarnings: 0,
+                milestonesClaimed: [],
                 transactions: [
                     {
                         type: "Account Registration",
@@ -683,13 +718,89 @@ function setupDashboardEventListeners() {
     const btnCopyDepositAddress = document.getElementById("btnCopyDepositAddress");
     const submitDepositProofBtn = document.getElementById("submitDepositProofBtn");
     
+    const BEP20_ABI = [
+        "function transfer(address to, uint256 amount) returns (bool)",
+        "function balanceOf(address account) view returns (uint256)",
+        "function decimals() view returns (uint8)"
+    ];
+    const BEP20_TOKEN_ADDRESSES = {
+        USDT: "0x55d398326f99059fF775485246999027B3197955",
+        BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+        ELX: "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE"
+    };
+    const DEPOSIT_RECEIVER_ADDRESS = "0x00a013ae494C9cdD1C0eD7e8c56Eb7aa9442AC3b";
+
+    async function updateDepositBalanceDisplay() {
+        const currencySelect = document.getElementById("depositCurrencySelect");
+        const balanceBadge = document.getElementById("depositBalanceBadge");
+        const customContractInput = document.getElementById("customTokenContractInput");
+        
+        if (!currencySelect || !balanceBadge) return;
+        
+        const selected = currencySelect.value;
+        if (typeof window.ethereum === 'undefined') {
+            balanceBadge.innerText = "Bal: --";
+            return;
+        }
+        
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await provider.send("eth_accounts", []);
+            if (accounts.length === 0) {
+                balanceBadge.innerText = "Bal: (Connect)";
+                return;
+            }
+            const account = accounts[0];
+            
+            if (selected === "BNB") {
+                const balanceWei = await provider.getBalance(account);
+                const balance = ethers.formatEther(balanceWei);
+                balanceBadge.innerText = `Bal: ${parseFloat(balance).toFixed(4)} BNB`;
+            } else {
+                let tokenAddress = selected === "CUSTOM" ? (customContractInput?.value?.trim() || "") : BEP20_TOKEN_ADDRESSES[selected];
+                if (!ethers.isAddress(tokenAddress)) {
+                    balanceBadge.innerText = "Bal: --";
+                    return;
+                }
+                const contract = new ethers.Contract(tokenAddress, BEP20_ABI, provider);
+                const decimals = await contract.decimals().catch(() => 18);
+                const balanceWei = await contract.balanceOf(account);
+                const balance = ethers.formatUnits(balanceWei, decimals);
+                balanceBadge.innerText = `Bal: ${parseFloat(balance).toFixed(4)} ${selected === "CUSTOM" ? "Tokens" : selected}`;
+            }
+        } catch (e) {
+            console.warn("Failed to fetch wallet balance:", e);
+            balanceBadge.innerText = "Bal: --";
+        }
+    }
+
     if (btnMockDeposit && depositModal) {
         btnMockDeposit.addEventListener("click", () => {
             if (!activeSession) return;
             document.getElementById("depAmountInput").value = "";
-            document.getElementById("depTxHashInput").value = "";
+            const customGroup = document.getElementById("customTokenContractGroup");
+            if (customGroup) customGroup.style.display = "none";
+            const statusMsg = document.getElementById("depositStatusMessage");
+            if (statusMsg) statusMsg.style.display = "none";
             depositModal.classList.add("active");
+            updateDepositBalanceDisplay();
         });
+    }
+    
+    const depositCurrencySelect = document.getElementById("depositCurrencySelect");
+    if (depositCurrencySelect) {
+        depositCurrencySelect.addEventListener("change", () => {
+            const customGroup = document.getElementById("customTokenContractGroup");
+            if (customGroup) {
+                customGroup.style.display = depositCurrencySelect.value === "CUSTOM" ? "block" : "none";
+            }
+            updateDepositBalanceDisplay();
+        });
+    }
+
+    const customTokenContractInput = document.getElementById("customTokenContractInput");
+    if (customTokenContractInput) {
+        customTokenContractInput.addEventListener("input", updateDepositBalanceDisplay);
     }
     
     if (closeDepositModalBtn && depositModal) {
@@ -706,62 +817,168 @@ function setupDashboardEventListeners() {
     
     if (btnCopyDepositAddress) {
         btnCopyDepositAddress.addEventListener("click", () => {
-            navigator.clipboard.writeText("0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE")
+            navigator.clipboard.writeText("0x00a013ae494C9cdD1C0eD7e8c56Eb7aa9442AC3b")
                 .then(() => showToast("Deposit contract address copied!"))
                 .catch(() => showToast("Failed to copy address."));
         });
     }
-    
-    if (submitDepositProofBtn && depositModal) {
-        submitDepositProofBtn.addEventListener("click", () => {
+
+    const btnExecuteWeb3Deposit = document.getElementById("btnExecuteWeb3Deposit");
+    if (btnExecuteWeb3Deposit) {
+        btnExecuteWeb3Deposit.addEventListener("click", async () => {
             if (!activeSession) return;
             
-            const amount = parseFloat(document.getElementById("depAmountInput").value);
-            const txHash = document.getElementById("depTxHashInput").value.trim();
+            const amountInput = document.getElementById("depAmountInput");
+            const currencySelect = document.getElementById("depositCurrencySelect");
+            const customContractInput = document.getElementById("customTokenContractInput");
+            const statusMsg = document.getElementById("depositStatusMessage");
             
+            if (!amountInput || !currencySelect) return;
+            
+            const amountStr = amountInput.value.trim();
+            const amount = parseFloat(amountStr);
             if (isNaN(amount) || amount <= 0) {
                 showToast("Please enter a valid deposit amount.");
                 return;
             }
             
-            if (!txHash || !txHash.startsWith("0x") || txHash.length < 15) {
-                showToast("Please enter a valid transaction hash (TxID).");
-                return;
-            }
-            
-            // Check for duplicate TxID across all platform users
-            let isDuplicate = false;
-            Object.keys(usersData).forEach(u => {
-                const userObj = usersData[u];
-                if (userObj.transactions) {
-                    userObj.transactions.forEach(t => {
-                        if (t.txHash === txHash) isDuplicate = true;
-                    });
+            const selected = currencySelect.value;
+            let tokenContractAddress = "";
+            if (selected === "CUSTOM") {
+                tokenContractAddress = customContractInput?.value?.trim() || "";
+                if (!ethers.isAddress(tokenContractAddress)) {
+                    showToast("Please enter a valid custom BEP-20 token contract address.");
+                    return;
                 }
-            });
+            } else if (selected !== "BNB") {
+                tokenContractAddress = BEP20_TOKEN_ADDRESSES[selected];
+            }
             
-            if (isDuplicate) {
-                showToast("This Transaction Hash has already been processed or submitted.");
+            if (typeof window.ethereum === 'undefined') {
+                showToast("Web3 wallet (e.g. MetaMask) not detected!");
                 return;
             }
             
-            const user = usersData[activeSession.username.toLowerCase()];
-            if (!user.transactions) user.transactions = [];
-            
-            user.transactions.push({
-                type: "Token Deposit Proof",
-                amount: amount,
-                unit: "ELX",
-                timestamp: Date.now(),
-                txHash: txHash,
-                status: "Pending",
-                desc: `Deposit proof submitted for verification. TxID: ${txHash.slice(0, 10)}...`
-            });
-            
-            saveUsersData();
-            loadDashboard(user.username);
-            depositModal.classList.remove("active");
-            showToast("Deposit proof submitted! Pending admin verification.");
+            try {
+                btnExecuteWeb3Deposit.disabled = true;
+                if (statusMsg) {
+                    statusMsg.style.display = "block";
+                    statusMsg.style.borderColor = "var(--border-titanium)";
+                    statusMsg.style.color = "var(--accent-cyan)";
+                    statusMsg.innerText = "Connecting to Web3 wallet...";
+                }
+                
+                if (statusMsg) statusMsg.innerText = "Requesting wallet connection...";
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (!accounts || accounts.length === 0) {
+                    throw new Error("No accounts connected. Please authorize your wallet.");
+                }
+                
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+                
+                if (statusMsg) statusMsg.innerText = "Verifying network is BNB Smart Chain...";
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== "0x38") {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: '0x38' }],
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: '0x38',
+                                    chainName: "BNB Smart Chain",
+                                    rpcUrls: ["https://rpc.ankr.com/bsc"],
+                                    nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+                                    blockExplorerUrls: ["https://bscscan.com"]
+                                }],
+                            });
+                        } else {
+                            throw new Error("Please switch your wallet to BNB Smart Chain.");
+                        }
+                    }
+                }
+                
+                if (statusMsg) statusMsg.innerText = "Preparing transaction...";
+                let tx;
+                
+                if (selected === "BNB") {
+                    tx = await signer.sendTransaction({
+                        to: DEPOSIT_RECEIVER_ADDRESS,
+                        value: ethers.parseEther(amountStr)
+                    });
+                } else {
+                    const contract = new ethers.Contract(tokenContractAddress, BEP20_ABI, signer);
+                    const decimals = await contract.decimals().catch(() => 18);
+                    const parsedAmount = ethers.parseUnits(amountStr, decimals);
+                    
+                    tx = await contract.transfer(DEPOSIT_RECEIVER_ADDRESS, parsedAmount);
+                }
+                
+                if (statusMsg) statusMsg.innerText = "Transaction broadcasted! Waiting for block confirmations...";
+                showToast("Transaction sent! Confirming on-chain...");
+                
+                const receipt = await tx.wait();
+                if (receipt && receipt.status === 1) {
+                    if (statusMsg) {
+                        statusMsg.style.borderColor = "var(--success)";
+                        statusMsg.style.color = "var(--success)";
+                        statusMsg.innerText = "Transfer complete! Submitting deposit log...";
+                    }
+                    
+                    // Auto submit deposit record
+                    const user = usersData[activeSession.username.toLowerCase()];
+                    if (!user.transactions) user.transactions = [];
+                    
+                    user.transactions.push({
+                        type: "Web3 Token Deposit",
+                        amount: amount,
+                        unit: selected === "CUSTOM" ? "BEP-20 Custom" : selected,
+                        timestamp: Date.now(),
+                        txHash: tx.hash,
+                        status: "Pending",
+                        desc: `Web3 Deposit of ${amount} ${selected}. TxID: ${tx.hash.slice(0, 10)}...`
+                    });
+                    
+                    saveUsersData();
+                    loadDashboard(user.username);
+                    
+                    showToast("Deposit completed successfully!");
+                    setTimeout(() => {
+                        depositModal.classList.remove("active");
+                        if (statusMsg) statusMsg.style.display = "none";
+                        amountInput.value = "";
+                        btnExecuteWeb3Deposit.disabled = false;
+                    }, 2000);
+                } else {
+                    throw new Error("Transaction execution failed or reverted.");
+                }
+            } catch (err) {
+                console.error("Deposit transaction failed:", err);
+                let errorMsg = "Transaction failed.";
+                if (err.code === -32002 || (err.message && err.message.includes("already pending"))) {
+                    errorMsg = "Request already pending. Please click the MetaMask extension icon in your browser toolbar to approve the request!";
+                } else if (err.reason) {
+                    errorMsg = `Reverted: ${err.reason}`;
+                } else if (err.message) {
+                    if (err.message.includes("user rejected") || err.message.includes("action rejected")) {
+                        errorMsg = "Transaction rejected by user.";
+                    } else {
+                        errorMsg = err.message.split("\n")[0];
+                    }
+                }
+                if (statusMsg) {
+                    statusMsg.style.borderColor = "var(--error)";
+                    statusMsg.style.color = "var(--error)";
+                    statusMsg.innerText = errorMsg;
+                }
+                showToast(errorMsg);
+                btnExecuteWeb3Deposit.disabled = false;
+            }
         });
     }
 
@@ -963,6 +1180,13 @@ function loadDashboard(username) {
     if (user.welcomeBonus === undefined) user.welcomeBonus = 10;
     if (user.depositedBalance === undefined) user.depositedBalance = Math.max(0, user.balance - user.welcomeBonus);
     
+    // MLM / Referral Schema
+    if (user.referrer === undefined) user.referrer = "";
+    if (user.referralIncome === undefined) user.referralIncome = 0;
+    if (user.roiLevelIncome === undefined) user.roiLevelIncome = 0;
+    if (user.cumulativeEarnings === undefined) user.cumulativeEarnings = 0;
+    if (user.milestonesClaimed === undefined) user.milestonesClaimed = [];
+
     // KYC & Profile Defaults migration
     if (user.walletLinked === undefined) user.walletLinked = "";
     if (user.kyc === undefined) user.kyc = { status: "Not Submitted", fullName: "", country: "", docType: "Passport", docId: "" };
@@ -983,6 +1207,8 @@ function loadDashboard(username) {
     // Auto load tab specific views if hash is active
     if (window.location.hash === "#profile") {
         if (UI.tabBtnProfile) UI.tabBtnProfile.click();
+    } else if (window.location.hash === "#referrals") {
+        if (UI.tabBtnReferrals) UI.tabBtnReferrals.click();
     } else if (window.location.hash === "#withdraw") {
         if (UI.tabBtnWithdraw) UI.tabBtnWithdraw.click();
     } else if (window.location.hash === "#support") {
@@ -1433,6 +1659,9 @@ function executeStakeDeposit() {
             desc: `Locked ${amount} ELX (${source === "bonus" ? "Mined & Bonus" : "Deposited"}) in ${pool.name} pool.`
         });
         
+        // Distribute upline referral commissions (up to 10 levels)
+        distributeStakeCommissions(user.username, amount);
+        
         saveUsersData();
         loadDashboard(user.username);
         
@@ -1463,20 +1692,45 @@ window.triggerClaimRewardsFlow = function(index) {
         return;
     }
     
+    const activePrincipal = getUserActivePrincipal(user);
+    const capLimit = activePrincipal * 3.0;
+    const currentEarnings = user.cumulativeEarnings || 0;
+    
+    if (activePrincipal > 0 && currentEarnings >= capLimit) {
+        showToast("Earning cap reached! You must top-up your stakes to claim rewards.");
+        return;
+    }
+    
     showToast("Processing staking claim transfer...");
     
     setTimeout(() => {
-        // Yield claims always return to the available staking wallet balance
-        user.balance += totalClaimable;
+        let finalClaim = totalClaimable;
+        let overCap = false;
+        if (activePrincipal > 0) {
+            const remainingSpace = capLimit - currentEarnings;
+            if (finalClaim > remainingSpace) {
+                finalClaim = remainingSpace;
+                overCap = true;
+            }
+        }
         
-        // Log transaction
-        user.transactions.push({
-            type: "Claim Yield",
-            amount: totalClaimable,
-            unit: "ELX",
-            timestamp: Date.now(),
-            desc: `Claimed yield rewards from ${pool.name} pool.`
-        });
+        if (finalClaim > 0) {
+            // Yield claims always return to the available staking wallet balance
+            user.balance += finalClaim;
+            user.cumulativeEarnings = (user.cumulativeEarnings || 0) + finalClaim;
+            
+            // Log transaction
+            user.transactions.push({
+                type: "Claim Yield",
+                amount: finalClaim,
+                unit: "ELX",
+                timestamp: Date.now(),
+                desc: `Claimed yield rewards from ${pool.name} pool.${overCap ? ' (Earnings capped at 300% limit)' : ''}`
+            });
+            
+            // Distribute upline yield multiplier bonuses (up to 5 levels)
+            distributeRoiCommissions(user.username, finalClaim);
+        }
         
         // Reset stake values
         stake.claimedRewards = 0;
@@ -1484,7 +1738,12 @@ window.triggerClaimRewardsFlow = function(index) {
         
         saveUsersData();
         loadDashboard(user.username);
-        showToast(`Successfully claimed ${totalClaimable.toFixed(4)} ELX!`);
+        
+        if (overCap) {
+            showToast(`Claim completed. Capped at 300% limit: received ${finalClaim.toFixed(4)} ELX.`);
+        } else {
+            showToast(`Successfully claimed ${finalClaim.toFixed(4)} ELX!`);
+        }
     }, 1000);
 };
 
@@ -1501,7 +1760,12 @@ window.triggerUnstakeFlow = function(index) {
     
     const isLocked = now < stake.unlockDate;
     if (pool.lockDays > 0 && isLocked) {
-        showToast("Cannot unstake! This pool is locked until maturity.");
+        const penalty = stake.amount * 0.20;
+        const netPrincipal = stake.amount - penalty;
+        const confirmPenalty = confirm(`This pool is locked until maturity. Unstaking early will incur a 20% premature withdrawal penalty (${penalty.toFixed(2)} ELX). You will receive ${netPrincipal.toFixed(2)} ELX and forfeit all accrued yields. Proceed?`);
+        if (!confirmPenalty) return;
+        
+        executeEarlyUnstake(index, penalty);
         return;
     }
     
@@ -1512,6 +1776,20 @@ window.triggerUnstakeFlow = function(index) {
         const elapsedSec = (now - stake.lastUpdate) / 1000;
         const tickYield = stake.amount * (pool.apy / 100) * (elapsedSec / (365 * 24 * 60 * 60));
         const totalPending = stake.claimedRewards + tickYield;
+        
+        const activePrincipal = getUserActivePrincipal(user);
+        const capLimit = activePrincipal * 3.0;
+        const currentEarnings = user.cumulativeEarnings || 0;
+        
+        let finalYieldClaim = totalPending;
+        let overCap = false;
+        if (activePrincipal > 0) {
+            const remainingSpace = capLimit - currentEarnings;
+            if (finalYieldClaim > remainingSpace) {
+                finalYieldClaim = Math.max(0, remainingSpace);
+                overCap = true;
+            }
+        }
         
         // Principal is refunded to its original funding source
         const source = stake.source || "deposit";
@@ -1532,8 +1810,12 @@ window.triggerUnstakeFlow = function(index) {
         }
         
         // Claimed yields always route to Staking Wallet
-        if (totalPending > 0) {
-            user.balance += totalPending;
+        if (finalYieldClaim > 0) {
+            user.balance += finalYieldClaim;
+            user.cumulativeEarnings = (user.cumulativeEarnings || 0) + finalYieldClaim;
+            
+            // Distribute upline yield multiplier bonuses (up to 5 levels)
+            distributeRoiCommissions(user.username, finalYieldClaim);
         }
         
         // Log transactions
@@ -1548,10 +1830,10 @@ window.triggerUnstakeFlow = function(index) {
         if (totalPending > 0) {
             user.transactions.push({
                 type: "Claim Yield Final",
-                amount: totalPending,
+                amount: finalYieldClaim,
                 unit: "ELX",
                 timestamp: Date.now(),
-                desc: `Claimed final yield rewards from ${pool.name}.`
+                desc: `Claimed final yield rewards from ${pool.name}.${overCap ? ' (Earnings capped at 300% limit)' : ''}`
             });
         }
         
@@ -1610,24 +1892,35 @@ async function linkMetaMaskWallet() {
             const address = accounts[0];
             if (activeSession) {
                 const user = usersData[activeSession.username.toLowerCase()];
-                user.walletLinked = address;
-                
-                user.transactions.push({
-                    type: "MetaMask Linked",
-                    amount: 0,
-                    unit: "ELX",
-                    timestamp: Date.now(),
-                    desc: `Bound MetaMask address: ${address.slice(0, 10)}...${address.slice(-8)}`
-                });
-                
-                saveUsersData();
-                loadDashboard(user.username);
-                showToast("MetaMask wallet successfully bound to account!");
+                if (user) {
+                    user.walletLinked = address;
+                    
+                    user.transactions.push({
+                        type: "MetaMask Linked",
+                        amount: 0,
+                        unit: "ELX",
+                        timestamp: Date.now(),
+                        desc: `Bound MetaMask address: ${address.slice(0, 10)}...${address.slice(-8)}`
+                    });
+                    
+                    saveUsersData();
+                    loadDashboard(user.username);
+                    showToast("MetaMask wallet successfully bound to account!");
+                } else {
+                    showToast("User session invalid or user not found in database.");
+                    if (UI.btnLinkWallet) {
+                        UI.btnLinkWallet.innerText = "Link Web3 Wallet";
+                    }
+                }
             }
         }
     } catch (err) {
         console.error("MetaMask binding failed:", err);
-        showToast("Connection rejected.");
+        let errorMsg = "Connection rejected.";
+        if (err.code === -32002 || (err.message && err.message.includes("already pending"))) {
+            errorMsg = "Connection request already pending. Please open your MetaMask wallet extension to approve!";
+        }
+        showToast(errorMsg);
         if (activeSession) loadDashboard(activeSession.username);
     }
 }
@@ -2195,6 +2488,600 @@ function renderSupportTickets(user) {
         list.appendChild(card);
     });
 }
+
+// =========================================================================
+// MLM Referral, Earning Cap, and Lifetime Milestone Rewards Logic
+// =========================================================================
+
+// Helper: Get active direct referrals count
+function getActiveDirectReferralsCount(username) {
+    let count = 0;
+    const target = username.toLowerCase();
+    Object.keys(usersData).forEach(u => {
+        const user = usersData[u];
+        if (user.referrer && user.referrer.toLowerCase() === target) {
+            const activeStakes = (user.stakes || []).filter(s => s.active !== false);
+            if (activeStakes.length > 0) {
+                count++;
+            }
+        }
+    });
+    return count;
+}
+
+// Helper: Traverse sub-tree of a user to get total volume and build structure
+function getSubtreeVolumeAndStructure(username, currentLevel, maxLevel, listOutput, structureSet) {
+    if (currentLevel > maxLevel) return 0;
+    
+    let totalVolume = 0;
+    const target = username.toLowerCase();
+    
+    Object.keys(usersData).forEach(u => {
+        const user = usersData[u];
+        if (user.referrer && user.referrer.toLowerCase() === target && !structureSet.has(user.username.toLowerCase())) {
+            structureSet.add(user.username.toLowerCase());
+            
+            // Calculate active stake volume for this user
+            let activeStakeAmt = 0;
+            if (user.stakes && user.stakes.length > 0) {
+                user.stakes.forEach(s => {
+                    if (s.active !== false) {
+                        activeStakeAmt += s.amount;
+                    }
+                });
+            }
+            
+            listOutput.push({
+                level: currentLevel,
+                username: user.username,
+                activeStake: activeStakeAmt,
+                joinDate: (user.transactions && user.transactions[0]) ? user.transactions[0].timestamp : Date.now()
+            });
+            
+            totalVolume += activeStakeAmt;
+            
+            // Recurse down
+            const childVolume = getSubtreeVolumeAndStructure(user.username, currentLevel + 1, maxLevel, listOutput, structureSet);
+            totalVolume += childVolume;
+        }
+    });
+    
+    return totalVolume;
+}
+
+// Helper: Get full downline stats including legs and qualified milestone volume
+function getDownlineNetworkStats(username) {
+    const directLegs = [];
+    const target = username.toLowerCase();
+    
+    // Find all direct referrals (legs)
+    Object.keys(usersData).forEach(u => {
+        const user = usersData[u];
+        if (user.referrer && user.referrer.toLowerCase() === target) {
+            directLegs.push(user.username);
+        }
+    });
+    
+    let totalDownlineVolume = 0;
+    const allMembers = [];
+    const legsVolumes = {};
+    
+    directLegs.forEach(leg => {
+        const legMembers = [];
+        const structureSet = new Set([username.toLowerCase(), leg.toLowerCase()]);
+        
+        let legActiveStakeAmt = 0;
+        const legUser = usersData[leg.toLowerCase()];
+        if (legUser && legUser.stakes) {
+            legUser.stakes.forEach(s => {
+                if (s.active !== false) legActiveStakeAmt += s.amount;
+            });
+        }
+        
+        legMembers.push({
+            level: 1,
+            username: leg,
+            activeStake: legActiveStakeAmt,
+            joinDate: (legUser && legUser.transactions && legUser.transactions[0]) ? legUser.transactions[0].timestamp : Date.now()
+        });
+        
+        const subVolume = getSubtreeVolumeAndStructure(leg, 2, 10, legMembers, structureSet);
+        const legTotalVolume = legActiveStakeAmt + subVolume;
+        
+        legsVolumes[leg.toLowerCase()] = legTotalVolume;
+        totalDownlineVolume += legTotalVolume;
+        
+        legMembers.forEach(m => allMembers.push(m));
+    });
+    
+    return {
+        totalVolume: totalDownlineVolume,
+        members: allMembers,
+        legsVolumes: legsVolumes
+    };
+}
+
+// Helper: Calculate qualified volume for a milestone target using matching lines volume rule
+function getQualifiedMilestoneVolume(legsVolumes, targetT) {
+    const vols = Object.values(legsVolumes).sort((a, b) => b - a);
+    if (vols.length === 0) return 0;
+    if (vols.length === 1) return 0; // matching requires at least 2 lines
+    
+    const strongest = vols[0];
+    const restSum = vols.slice(1).reduce((sum, v) => sum + v, 0);
+    
+    return Math.min(strongest, restSum);
+}
+
+// Helper: Get user active staked principal
+function getUserActivePrincipal(user) {
+    let active = 0;
+    if (user.stakes) {
+        user.stakes.forEach(s => {
+            if (s.active !== false) {
+                active += s.amount;
+            }
+        });
+    }
+    return active;
+}
+
+// Distribution: Multi-level stake referral commissions (up to 10 levels)
+function distributeStakeCommissions(stakerUsername, stakeAmount) {
+    const commissionRates = {
+        1: 0.05, // 5%
+        2: 0.02, // 2%
+        3: 0.01, // 1%
+        4: 0.01, // 1%
+        5: 0.01, // 1%
+        6: 0.004, // 0.4%
+        7: 0.004,
+        8: 0.004,
+        9: 0.004,
+        10: 0.004
+    };
+    
+    let currentUpline = usersData[stakerUsername.toLowerCase()].referrer;
+    let level = 1;
+    
+    while (currentUpline && level <= 10) {
+        const uplineUser = usersData[currentUpline.toLowerCase()];
+        if (!uplineUser) break;
+        
+        // Qualification check: Direct active referrals
+        let qualified = false;
+        const activeDirects = getActiveDirectReferralsCount(uplineUser.username);
+        
+        if (level === 1) {
+            qualified = true; // Level 1 is direct, always qualified
+        } else {
+            qualified = activeDirects >= level;
+        }
+        
+        if (qualified) {
+            const activePrincipal = getUserActivePrincipal(uplineUser);
+            const capLimit = activePrincipal * 3.0;
+            const currentEarnings = uplineUser.cumulativeEarnings || 0;
+            
+            if (activePrincipal > 0 && currentEarnings < capLimit) {
+                let commission = stakeAmount * commissionRates[level];
+                const remainingSpace = capLimit - currentEarnings;
+                
+                if (commission > remainingSpace) {
+                    commission = remainingSpace;
+                }
+                
+                if (commission > 0) {
+                    uplineUser.balance = (uplineUser.balance || 0) + commission;
+                    uplineUser.referralIncome = (uplineUser.referralIncome || 0) + commission;
+                    uplineUser.cumulativeEarnings = (uplineUser.cumulativeEarnings || 0) + commission;
+                    
+                    uplineUser.transactions = uplineUser.transactions || [];
+                    uplineUser.transactions.push({
+                        type: "Referral Commission",
+                        amount: commission,
+                        unit: "ELX",
+                        timestamp: Date.now(),
+                        desc: `Received Level ${level} network commission from downline user ${stakerUsername}.`
+                    });
+                }
+            }
+        }
+        
+        currentUpline = uplineUser.referrer;
+        level++;
+    }
+}
+
+// Distribution: Yield ROI Multiplier Bonus (up to 5 levels)
+function distributeRoiCommissions(stakerUsername, yieldAmount) {
+    const roiRates = {
+        1: 0.10, // 10%
+        2: 0.05, // 5%
+        3: 0.03, // 3%
+        4: 0.02, // 2%
+        5: 0.01  // 1%
+    };
+    
+    let currentUpline = usersData[stakerUsername.toLowerCase()].referrer;
+    let level = 1;
+    
+    while (currentUpline && level <= 5) {
+        const uplineUser = usersData[currentUpline.toLowerCase()];
+        if (!uplineUser) break;
+        
+        const activePrincipal = getUserActivePrincipal(uplineUser);
+        const capLimit = activePrincipal * 3.0;
+        const currentEarnings = uplineUser.cumulativeEarnings || 0;
+        
+        if (activePrincipal > 0 && currentEarnings < capLimit) {
+            let commission = yieldAmount * roiRates[level];
+            const remainingSpace = capLimit - currentEarnings;
+            
+            if (commission > remainingSpace) {
+                commission = remainingSpace;
+            }
+            
+            if (commission > 0) {
+                uplineUser.balance = (uplineUser.balance || 0) + commission;
+                uplineUser.roiLevelIncome = (uplineUser.roiLevelIncome || 0) + commission;
+                uplineUser.cumulativeEarnings = (uplineUser.cumulativeEarnings || 0) + commission;
+                
+                uplineUser.transactions = uplineUser.transactions || [];
+                uplineUser.transactions.push({
+                    type: "ROI Level Bonus",
+                    amount: commission,
+                    unit: "ELX",
+                    timestamp: Date.now(),
+                    desc: `Received Level ${level} yield multiplier bonus from downline user ${stakerUsername}.`
+                });
+            }
+        }
+        
+        currentUpline = uplineUser.referrer;
+        level++;
+    }
+}
+
+// Premature withdrawal execution helper
+function executeEarlyUnstake(index, penalty) {
+    const user = usersData[activeSession.username.toLowerCase()];
+    const stake = user.stakes[index];
+    const pool = STAKING_POOLS[stake.poolId];
+    const netPrincipal = stake.amount - penalty;
+    
+    // Increment global ecosystem utility pool penalties
+    let utilityPool = parseFloat(localStorage.getItem("elonix_ecosystem_utility_pool") || "0");
+    utilityPool += penalty;
+    localStorage.setItem("elonix_ecosystem_utility_pool", utilityPool.toString());
+    
+    // Principal returned to original source minus penalty
+    const source = stake.source || "deposit";
+    if (source === "deposit") {
+        user.depositedBalance = (user.depositedBalance || 0) + netPrincipal;
+        user.balance += netPrincipal;
+    } else {
+        const spaceInWelcome = 10 - (user.welcomeBonus || 0);
+        if (netPrincipal <= spaceInWelcome) {
+            user.welcomeBonus = (user.welcomeBonus || 0) + netPrincipal;
+            user.balance += netPrincipal;
+        } else {
+            user.welcomeBonus = 10;
+            user.balance += spaceInWelcome;
+            user.miningBalance = (user.miningBalance || 0) + (netPrincipal - spaceInWelcome);
+        }
+    }
+    
+    // Log transaction
+    user.transactions.push({
+        type: "Premature Unstake",
+        amount: netPrincipal,
+        unit: "ELX",
+        timestamp: Date.now(),
+        desc: `Prematurely unstaked from ${pool.name} with 20% penalty of ${penalty.toFixed(2)} ELX.`
+    });
+    
+    // Remove stake
+    user.stakes.splice(index, 1);
+    
+    saveUsersData();
+    loadDashboard(user.username);
+    showToast(`Early unstake complete. ${penalty.toFixed(2)} ELX penalty applied.`);
+}
+
+// Render Referral Tab view
+// Render Referral Tab view
+window.switchRefSubTab = function(tabName) {
+    const tabEarnings = document.getElementById("refEarningsSubTab");
+    const tabTree = document.getElementById("refTreeSubTab");
+    const tabLinks = document.getElementById("refLinksSubTab");
+    
+    const btnEarnings = document.getElementById("refSubBtnEarnings");
+    const btnTree = document.getElementById("refSubBtnTree");
+    const btnLinks = document.getElementById("refSubBtnLinks");
+    
+    if (tabEarnings) tabEarnings.style.display = tabName === 'earnings' ? 'grid' : 'none';
+    if (tabTree) tabTree.style.display = tabName === 'tree' ? 'block' : 'none';
+    if (tabLinks) tabLinks.style.display = tabName === 'links' ? 'grid' : 'none';
+    
+    if (btnEarnings) btnEarnings.classList.toggle("active", tabName === 'earnings');
+    if (btnTree) btnTree.classList.toggle("active", tabName === 'tree');
+    if (btnLinks) btnLinks.classList.toggle("active", tabName === 'links');
+};
+
+function setupReferralsEventListeners() {
+    const searchInput = document.getElementById("downlineSearchInput");
+    const statusFilter = document.getElementById("downlineStatusFilter");
+    
+    if (searchInput && !searchInput.dataset.listener) {
+        searchInput.dataset.listener = "true";
+        searchInput.addEventListener("input", () => {
+            if (activeSession) {
+                renderReferralsNetworkView(usersData[activeSession.username.toLowerCase()]);
+            }
+        });
+    }
+    
+    if (statusFilter && !statusFilter.dataset.listener) {
+        statusFilter.dataset.listener = "true";
+        statusFilter.addEventListener("change", () => {
+            if (activeSession) {
+                renderReferralsNetworkView(usersData[activeSession.username.toLowerCase()]);
+            }
+        });
+    }
+}
+
+function renderReferralsNetworkView(user) {
+    setupReferralsEventListeners();
+
+    const referralUrlInput = document.getElementById("referralUrlInput");
+    if (referralUrlInput) {
+        const loc = window.location;
+        referralUrlInput.value = `${loc.protocol}//${loc.host}${loc.pathname}?ref=${user.username}`;
+    }
+    
+    const btnCopy = document.getElementById("btnCopyReferralUrl");
+    if (btnCopy) {
+        btnCopy.onclick = () => {
+            if (referralUrlInput) {
+                referralUrlInput.select();
+                referralUrlInput.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(referralUrlInput.value);
+                showToast("Referral link copied!");
+            }
+        };
+    }
+    
+    const directSponsorText = document.getElementById("refDirectSponsor");
+    if (directSponsorText) {
+        directSponsorText.innerText = user.referrer || "None";
+    }
+    
+    const stats = getDownlineNetworkStats(user.username);
+    const activeDirects = getActiveDirectReferralsCount(user.username);
+    
+    let totalDirectsCount = 0;
+    Object.keys(usersData).forEach(u => {
+        const uObj = usersData[u];
+        if (uObj.referrer && uObj.referrer.toLowerCase() === user.username.toLowerCase()) {
+            totalDirectsCount++;
+        }
+    });
+    
+    const refReferralCounts = document.getElementById("refReferralCounts");
+    if (refReferralCounts) {
+        refReferralCounts.innerText = `${activeDirects} / ${totalDirectsCount}`;
+    }
+    
+    const refDownlineVolume = document.getElementById("refDownlineVolume");
+    if (refDownlineVolume) {
+        refDownlineVolume.innerText = `${stats.totalVolume.toFixed(2)} ELX`;
+    }
+    
+    const refReferralIncome = document.getElementById("refReferralIncome");
+    if (refReferralIncome) {
+        refReferralIncome.innerText = `${(user.referralIncome || 0).toFixed(4)} ELX`;
+    }
+    
+    const refRoiLevelIncome = document.getElementById("refRoiLevelIncome");
+    if (refRoiLevelIncome) {
+        refRoiLevelIncome.innerText = `${(user.roiLevelIncome || 0).toFixed(4)} ELX`;
+    }
+    
+    const activePrincipal = getUserActivePrincipal(user);
+    const capLimit = activePrincipal * 3.0;
+    const currentEarnings = user.cumulativeEarnings || 0;
+    
+    const capActivePrincipal = document.getElementById("capActivePrincipal");
+    if (capActivePrincipal) {
+        capActivePrincipal.innerText = `${activePrincipal.toFixed(2)} ELX`;
+    }
+    const capCumulativeEarnings = document.getElementById("capCumulativeEarnings");
+    if (capCumulativeEarnings) {
+        capCumulativeEarnings.innerText = `${currentEarnings.toFixed(4)} ELX`;
+    }
+    const capMaxLimit = document.getElementById("capMaxLimit");
+    if (capMaxLimit) {
+        capMaxLimit.innerText = `${capLimit.toFixed(2)} ELX`;
+    }
+    
+    const capProgressBar = document.getElementById("capProgressBar");
+    const capStatusAlert = document.getElementById("capStatusAlert");
+    
+    let progressPercent = 0;
+    if (capLimit > 0) {
+        progressPercent = Math.min(100, (currentEarnings / capLimit) * 100);
+    }
+    if (capProgressBar) {
+        capProgressBar.style.width = `${progressPercent}%`;
+    }
+    if (capStatusAlert) {
+        if (capLimit > 0 && currentEarnings >= capLimit) {
+            capStatusAlert.style.display = "block";
+        } else {
+            capStatusAlert.style.display = "none";
+        }
+    }
+    
+    const milestones = [
+        { id: "star", name: "Star Core Node", target: 5000, rewardText: "Smartwatch OR 100 ELX Cash", rewardAmt: 100 },
+        { id: "silver", name: "Silver Master Node", target: 20000, rewardText: "High-End Laptop OR 400 ELX Cash", rewardAmt: 400 },
+        { id: "gold", name: "Gold Executive Node", target: 50000, rewardText: "Sports Motorcycle OR 1,000 ELX Cash", rewardAmt: 1000 },
+        { id: "diamond", name: "Diamond Legend Node", target: 200000, rewardText: "Luxury Sedan OR 5,000 ELX Cash", rewardAmt: 5000 },
+        { id: "double_diamond", name: "Double Diamond Sovereign", target: 800000, rewardText: "Luxury SUV OR 7,000 ELX Cash", rewardAmt: 7000 }
+    ];
+    
+    const mContainer = document.getElementById("milestonesContainer");
+    if (mContainer) {
+        mContainer.innerHTML = "";
+        
+        milestones.forEach(m => {
+            const qualifiedVol = getQualifiedMilestoneVolume(stats.legsVolumes, m.target);
+            const progressPct = Math.min(100, (qualifiedVol / m.target) * 100);
+            
+            const isClaimed = (user.milestonesClaimed || []).includes(m.id);
+            const canClaim = qualifiedVol >= m.target && !isClaimed;
+            
+            let statusBadge = "";
+            let actionBtn = "";
+            
+            if (isClaimed) {
+                statusBadge = `<span class="badge-status open" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--success);">Claimed</span>`;
+            } else if (qualifiedVol >= m.target) {
+                statusBadge = `<span class="badge-status open" style="background: rgba(0, 240, 255, 0.1); border-color: var(--accent-cyan); color: var(--accent-cyan);">Unlocked</span>`;
+                actionBtn = `<button class="btn btn-primary btn-glow btn-sm" onclick="claimMilestoneReward('${m.id}')" style="margin-top: 0.5rem; width: 100%; padding: 0.35rem;">Claim ${m.rewardAmt} ELX</button>`;
+            } else {
+                statusBadge = `<span class="badge-status closed" style="background: rgba(255, 255, 255, 0.02); border-color: var(--border-titanium); color: var(--text-muted);">Locked</span>`;
+            }
+            
+            const mDiv = document.createElement("div");
+            mDiv.style.background = "rgba(255, 255, 255, 0.01)";
+            mDiv.style.border = "1px solid var(--border-titanium)";
+            mDiv.style.padding = "0.75rem";
+            mDiv.style.borderRadius = "6px";
+            
+            mDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                    <strong style="font-size: 0.85rem;">${m.name} ($${m.target.toLocaleString()})</strong>
+                    ${statusBadge}
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                    Reward: ${m.rewardText}
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">
+                    <span>Qualified Volume: ${qualifiedVol.toFixed(2)} / ${m.target.toLocaleString()} ELX</span>
+                    <span>${progressPct.toFixed(1)}%</span>
+                </div>
+                <div class="progress-container" style="height: 6px; background: rgba(255, 255, 255, 0.02); border-radius: 3px; overflow: hidden;">
+                    <div style="width: ${progressPct}%; height: 100%; background: var(--accent-cyan);"></div>
+                </div>
+                ${actionBtn}
+            `;
+            mContainer.appendChild(mDiv);
+        });
+    }
+    
+    const treeBody = document.getElementById("downlineNetworkBody");
+    if (treeBody) {
+        treeBody.innerHTML = "";
+        
+        const searchInput = document.getElementById("downlineSearchInput");
+        const statusFilter = document.getElementById("downlineStatusFilter");
+        const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+        const statusVal = statusFilter ? statusFilter.value : "ALL";
+        
+        let filteredMembers = stats.members;
+        if (query) {
+            filteredMembers = filteredMembers.filter(m => m.username.toLowerCase().includes(query));
+        }
+        if (statusVal !== "ALL") {
+            filteredMembers = filteredMembers.filter(m => {
+                const isActive = m.activeStake > 0;
+                return statusVal === "ACTIVE" ? isActive : !isActive;
+            });
+        }
+        
+        const sortedMembers = filteredMembers.sort((a, b) => a.level - b.level);
+        if (sortedMembers.length === 0) {
+            treeBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-table-msg" style="text-align: center; padding: 2rem 0; font-size: 0.8rem; color: var(--text-muted);">
+                        No downline connections match the current filters.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        sortedMembers.forEach(m => {
+            const userObj = usersData[m.username.toLowerCase()];
+            const joinDateVal = userObj && userObj.joinDate ? userObj.joinDate : Date.now();
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="font-weight: 600;">L${m.level}</td>
+                <td class="font-tech text-cyan">${m.username}</td>
+                <td class="font-tech">${m.activeStake.toFixed(2)} ELX</td>
+                <td>${formatDateShort(new Date(joinDateVal))}</td>
+                <td style="text-align: right;">
+                    <span class="badge-status ${m.activeStake > 0 ? 'open' : 'closed'}">
+                        ${m.activeStake > 0 ? 'Active' : 'Inactive'}
+                    </span>
+                </td>
+            `;
+            treeBody.appendChild(tr);
+        });
+    }
+}
+
+// Claim Milestone Reward logic
+window.claimMilestoneReward = function(milestoneId) {
+    if (!activeSession) return;
+    const user = usersData[activeSession.username.toLowerCase()];
+    if (!user) return;
+    
+    const stats = getDownlineNetworkStats(user.username);
+    
+    const milestones = {
+        star: { target: 5000, amt: 100, name: "Star Core Node" },
+        silver: { target: 20000, amt: 400, name: "Silver Master Node" },
+        gold: { target: 50000, amt: 1000, name: "Gold Executive Node" },
+        diamond: { target: 200000, amt: 5000, name: "Diamond Legend Node" },
+        double_diamond: { target: 800000, amt: 7000, name: "Double Diamond Sovereign" }
+    };
+    
+    const m = milestones[milestoneId];
+    if (!m) return;
+    
+    const qualifiedVol = getQualifiedMilestoneVolume(stats.legsVolumes, m.target);
+    if (qualifiedVol < m.target) {
+        showToast("You are not qualified for this milestone reward.");
+        return;
+    }
+    
+    user.milestonesClaimed = user.milestonesClaimed || [];
+    if (user.milestonesClaimed.includes(milestoneId)) {
+        showToast("Milestone reward already claimed.");
+        return;
+    }
+    
+    user.milestonesClaimed.push(milestoneId);
+    user.balance = (user.balance || 0) + m.amt;
+    
+    user.transactions = user.transactions || [];
+    user.transactions.push({
+        type: "Milestone Reward",
+        amount: m.amt,
+        unit: "ELX",
+        timestamp: Date.now(),
+        desc: `Claimed Cash Reward for achieving rank ${m.name}!`
+    });
+    
+    saveUsersData();
+    renderReferralsNetworkView(user);
+    refreshBalanceDisplays(user);
+    showToast(`Congratulations! Claimed ${m.amt} ELX cash reward!`);
+};
 
 
 

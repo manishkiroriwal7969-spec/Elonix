@@ -162,6 +162,10 @@
                                     <label for="regConfirmPassword" class="form-label">Confirm Password</label>
                                     <input type="password" id="regConfirmPassword" class="form-input" placeholder="••••••••" autocomplete="new-password" minlength="6" required>
                                 </div>
+                                <div class="form-group" style="margin-top: 1rem;">
+                                    <label for="regReferrer" class="form-label">Referral Username (Optional)</label>
+                                    <input type="text" id="regReferrer" class="form-input" placeholder="e.g. sponsor_username" autocomplete="off">
+                                </div>
                                 <button type="submit" class="btn btn-primary btn-glow btn-full" style="margin-top: 1.5rem;">
                                     Create Security Account
                                 </button>
@@ -224,6 +228,9 @@
                         </button>
                         <button id="tabBtnProfile" class="dash-tab-btn">
                             <span class="icon">👤</span> Profile & KYC
+                        </button>
+                        <button id="tabBtnReferrals" class="dash-tab-btn">
+                            <span class="icon">👥</span> Referral Network
                         </button>
                         <button id="tabBtnWithdraw" class="dash-tab-btn">
                             <span class="icon">💸</span> Withdrawals
@@ -651,6 +658,172 @@
                         </div>
                     </div>
 
+                    <!-- ==================== TAB VIEW 3B: REFERRAL NETWORK ==================== -->
+                    <div id="referralsView" class="dashboard-view-panel" style="display: none; flex-direction: column; gap: 1.5rem;">
+                        <!-- Referral Sub Tab Navigation -->
+                        <div class="ref-sub-nav">
+                            <button id="refSubBtnEarnings" class="ref-sub-btn active" onclick="switchRefSubTab('earnings')">
+                                <span class="icon">📊</span> Earnings & Milestones
+                            </button>
+                            <button id="refSubBtnTree" class="ref-sub-btn" onclick="switchRefSubTab('tree')">
+                                <span class="icon">🕸️</span> Downline Structure
+                            </button>
+                            <button id="refSubBtnLinks" class="ref-sub-btn" onclick="switchRefSubTab('links')">
+                                <span class="icon">🔗</span> Link & Cap Shield
+                            </button>
+                        </div>
+
+                        <!-- Panel 1: Earnings & Milestones -->
+                        <div id="refEarningsSubTab" class="dashboard-grid grid-2col" style="display: grid; gap: 2rem;">
+                            <!-- Left: Referral Stats Card -->
+                            <div class="dashboard-card card-glow" style="display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <h3 class="card-title text-cyan"><span class="icon">📊</span> Referral Earnings & Stats</h3>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                        Comprehensive breakdown of direct commissions and monthly yield multipliers earned from downline staked nodes.
+                                    </p>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                                        <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 8px; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.01);">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem; font-weight: 500;">DIRECT SPONSOR</span>
+                                            <span id="refDirectSponsor" class="font-tech text-cyan" style="font-size: 1.05rem; font-weight: 700;">None</span>
+                                        </div>
+                                        <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 8px; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.01);">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem; font-weight: 500;">ACTIVE / TOTAL DIRECTS</span>
+                                            <span id="refReferralCounts" class="font-tech text-cyan" style="font-size: 1.05rem; font-weight: 700;">0 / 0</span>
+                                        </div>
+                                        <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 8px; box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.01); grid-column: span 2;">
+                                            <span style="font-size: 0.72rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem; font-weight: 500;">TOTAL ORGANIZATIONAL VOLUME</span>
+                                            <span id="refDownlineVolume" class="font-tech text-cyan" style="font-size: 1.25rem; font-weight: 700;">0.00 ELX</span>
+                                        </div>
+                                        <div style="background: rgba(16, 185, 129, 0.02); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 8px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.05); grid-column: span 2;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">DIRECT REFERRAL COMMISSION</span>
+                                                <span class="badge-status open" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--success);">5.0% Direct</span>
+                                            </div>
+                                            <span id="refReferralIncome" class="font-tech text-success" style="font-size: 1.35rem; font-weight: 700;">0.0000 ELX</span>
+                                        </div>
+                                        <div style="background: rgba(16, 185, 129, 0.02); border: 1px solid rgba(16, 185, 129, 0.2); padding: 1rem; border-radius: 8px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.05); grid-column: span 2;">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 500;">DOWNLINE ROI MULTIPLIER YIELD</span>
+                                                <span class="badge-status open" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.2); color: var(--success);">Up to 10% ROI</span>
+                                            </div>
+                                            <span id="refRoiLevelIncome" class="font-tech text-success" style="font-size: 1.35rem; font-weight: 700;">0.0000 ELX</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: Lifetime Milestone Rewards -->
+                            <div class="dashboard-card card-glow">
+                                <h3 class="card-title text-cyan"><span class="icon">🏆</span> Lifetime Milestone Rewards</h3>
+                                <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
+                                    Based on total downline staking volume. Qualified volume counts a maximum of 40% from any single strong referral leg to enforce balanced network growth.
+                                </p>
+                                
+                                <div id="milestonesContainer" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                    <!-- Milestone progress boxes injected here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Panel 2: Downline Network Structure -->
+                        <div id="refTreeSubTab" class="dashboard-card card-glow" style="display: none;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+                                <div>
+                                    <h3 class="card-title text-cyan" style="margin: 0; border: none; padding: 0;"><span class="icon">🕸️</span> Downline Organization Tree (Levels 1-10)</h3>
+                                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; margin-bottom: 0;">
+                                        Monitor node validation performance and active stakes of referrals in your 10-generation marketing matrix.
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <input type="text" id="downlineSearchInput" class="form-input text-cyan" placeholder="Filter by username..." style="padding: 0.5rem 1rem; font-size: 0.8rem; width: 200px;">
+                                    <select id="downlineStatusFilter" class="form-input text-cyan" style="padding: 0.5rem 1rem; font-size: 0.8rem; width: 140px; background: var(--bg-surface);">
+                                        <option value="ALL">All Statuses</option>
+                                        <option value="ACTIVE">Active Only</option>
+                                        <option value="INACTIVE">Inactive Only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div class="table-container" style="overflow-x: auto; border: 1px solid var(--border-titanium); border-radius: 8px;">
+                                <table class="data-table" style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th>Generation Level</th>
+                                            <th>Username</th>
+                                            <th>Active Principal Stake</th>
+                                            <th>Join Date</th>
+                                            <th style="text-align: right;">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="downlineNetworkBody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Panel 3: Affiliate Links & Cap Shield -->
+                        <div id="refLinksSubTab" class="dashboard-grid grid-2col" style="display: none; gap: 2rem;">
+                            <!-- Left: Affiliate Link Zone -->
+                            <div class="dashboard-card card-glow" style="display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <h3 class="card-title text-cyan"><span class="icon">👥</span> Referral Affiliate Link</h3>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                                        Copy and share your unique referral URL to direct traffic. New accounts registering via your link are automatically locked as downlines.
+                                    </p>
+                                    
+                                    <div style="display: flex; gap: 0.5rem; background: rgba(0, 0, 0, 0.2); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-titanium); margin-bottom: 2rem;">
+                                        <input type="text" id="referralUrlInput" class="font-tech text-cyan" style="background: none; border: none; outline: none; width: 100%; font-size: 0.82rem;" readonly value="">
+                                        <button id="btnCopyReferralUrl" class="btn btn-secondary btn-sm" style="padding: 0.35rem 1rem; font-size: 0.78rem; flex-shrink: 0;">Copy</button>
+                                    </div>
+
+                                    <div style="background: rgba(0, 240, 255, 0.01); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 8px; padding: 1.25rem;">
+                                        <h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 0.88rem;" class="text-cyan">💡 Protocol Compensation Summary</h4>
+                                        <ul style="font-size: 0.8rem; color: var(--text-secondary); padding-left: 1.25rem; margin: 0; line-height: 1.6;">
+                                            <li><strong>5.0% Direct Referral Commission</strong> is immediately credited to your Staking Balance upon direct downline deposits.</li>
+                                            <li><strong>Level Generation Bonuses</strong> yield up to 10 upline generations (7% total) depending on your count of active directs.</li>
+                                            <li><strong>ROI Yield Multipliers</strong> earn you a lifetime percentage of downline monthly yields (up to 5 levels, 10% max).</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Right: 300% Cap Shield -->
+                            <div class="dashboard-card card-glow" style="display: flex; flex-direction: column; justify-content: space-between;">
+                                <div>
+                                    <h3 class="card-title text-cyan"><span class="icon">🛡️</span> 300% Earning Cap Shield</h3>
+                                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                                        Security safeguards cap total cumulative earnings (claimed staking yields + MLM commissions) at 300% of your active principal stake to ensure long-term sustainability.
+                                    </p>
+                                    
+                                    <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.5rem;">
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+                                            <span style="color: var(--text-secondary);">Active Principal:</span>
+                                            <span id="capActivePrincipal" class="font-tech text-cyan" style="font-weight: 600;">0.00 ELX</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+                                            <span style="color: var(--text-secondary);">Cumulative Earnings:</span>
+                                            <span id="capCumulativeEarnings" class="font-tech text-success" style="font-weight: 600;">0.00 ELX</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem;">
+                                            <span style="color: var(--text-secondary);">300% Earning Limit Cap:</span>
+                                            <span id="capMaxLimit" class="font-tech text-cyan" style="font-weight: 600;">0.00 ELX</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="progress-container" style="height: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; overflow: hidden; border: 1px solid var(--border-titanium); margin-bottom: 1.5rem;">
+                                        <div id="capProgressBar" class="progress-fill" style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-cyan), var(--success)); transition: width 0.4s ease;"></div>
+                                    </div>
+                                    
+                                    <div id="capStatusAlert" style="display: none; padding: 1rem; border-radius: 8px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); color: #f87171; font-size: 0.82rem; text-align: center; font-weight: 600; line-height: 1.4;">
+                                        ⚠️ Earnings Cap Reached! You have claimed 300% of your principal. Please execute a new stake deposit (re-topup) to reactivate yield claims and network commissions.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- ==================== TAB VIEW 4: WITHDRAWALS ==================== -->
                     <div id="withdrawView" class="dashboard-grid dashboard-view-panel grid-1-5col" style="display: none;">
                         <!-- Withdrawal Request Form -->
@@ -810,35 +983,54 @@
         }
     </script>
 
-    <!-- Deposit Proof Modal -->
+    <!-- Web3 BEP-20 Deposit Modal -->
     <div id="depositModal" class="modal-overlay">
         <div class="modal-box card-glow" style="max-width: 500px;">
             <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">📥</span> Submit Deposit Proof</h3>
+                <h3 class="modal-title text-cyan" style="margin: 0; font-size: 1.25rem;"><span class="icon">💳</span> Web3 BEP-20 Deposit</h3>
                 <button id="closeDepositModalBtn" class="modal-close-x" style="background:none; border:none; color:var(--text-secondary); font-size:1.5rem; cursor:pointer;">&times;</button>
             </div>
             <div class="modal-body" style="padding: 0.5rem 0 1.25rem 0;">
                 <div class="deposit-instructions" style="margin-bottom: 1.25rem; background: rgba(0, 240, 255, 0.02); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 6px;">
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem; line-height: 1.4;">
-                        Transfer your sandbox ELX tokens from your Web3 MetaMask wallet to this platform deposit address:
+                        Select a BEP-20 token or native BNB. Connecting your Web3 wallet will automatically sign the transfer to our vault:
                     </p>
                     <div class="contract-copy-row" style="display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); padding: 0.5rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);">
-                         <code id="depositAddressText" class="font-tech text-cyan" style="font-size: 0.8rem; word-break: break-all;">0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE</code>
+                         <code id="depositAddressText" class="font-tech text-cyan" style="font-size: 0.8rem; word-break: break-all;">0x00a013ae494C9cdD1C0eD7e8c56Eb7aa9442AC3b</code>
                          <button id="btnCopyDepositAddress" class="btn btn-secondary btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.75rem; flex-shrink: 0; margin-left: 0.5rem;">Copy</button>
                     </div>
                 </div>
+                
                 <div class="form-group" style="margin-bottom: 1rem;">
-                    <label for="depAmountInput" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Transfer Amount (ELX)</label>
-                    <input type="number" id="depAmountInput" class="form-input text-cyan font-tech" placeholder="e.g. 250" min="1" step="10">
+                    <label for="depositCurrencySelect" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Select Currency (BEP-20)</label>
+                    <select id="depositCurrencySelect" class="form-input text-cyan font-tech" style="background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-titanium); border-radius: 4px; padding: 0.5rem; width: 100%;">
+                        <option value="BNB">BNB (Native BNB Chain)</option>
+                        <option value="USDT">USDT (Tether BEP-20)</option>
+                        <option value="BUSD">BUSD (Binance USD BEP-20)</option>
+                        <option value="ELX">ELX (ELONIX Token BEP-20)</option>
+                        <option value="CUSTOM">Custom BEP-20 Token</option>
+                    </select>
                 </div>
-                <div class="form-group">
-                    <label for="depTxHashInput" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Transaction Hash (TxID)</label>
-                    <input type="text" id="depTxHashInput" class="form-input font-tech" placeholder="0x..." style="letter-spacing: 0.5px;">
+                
+                <div id="customTokenContractGroup" class="form-group" style="margin-bottom: 1rem; display: none;">
+                    <label for="customTokenContractInput" class="form-label" style="font-size: 0.85rem; margin-bottom: 0.4rem;">Token Contract Address (BEP-20)</label>
+                    <input type="text" id="customTokenContractInput" class="form-input font-tech text-cyan" placeholder="0x..." style="width: 100%;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <label for="depAmountInput" class="form-label" style="font-size: 0.85rem; margin: 0;">Amount to Transfer</label>
+                        <span id="depositBalanceBadge" class="font-tech text-cyan" style="font-size: 0.75rem; font-weight: 500;">Bal: --</span>
+                    </div>
+                    <input type="number" id="depAmountInput" class="form-input text-cyan font-tech" placeholder="0.00" min="0.000001" step="any" style="width: 100%;">
+                </div>
+
+                <div id="depositStatusMessage" style="font-size: 0.85rem; line-height: 1.4; padding: 0.75rem; border-radius: 6px; background: rgba(0,240,255,0.03); border: 1px solid var(--border-titanium); display: none; margin-bottom: 1rem; word-break: break-all;">
                 </div>
             </div>
             <div class="modal-footer" style="display: flex; gap: 0.75rem; justify-content: flex-end; border-top: 1px solid var(--border-titanium); padding-top: 0.75rem;">
                 <button id="cancelDepositBtn" class="btn btn-secondary btn-sm">Cancel</button>
-                <button id="submitDepositProofBtn" class="btn btn-primary btn-glow btn-sm">Submit Deposit Proof</button>
+                <button id="btnExecuteWeb3Deposit" class="btn btn-primary btn-glow btn-sm">Connect & Pay</button>
             </div>
         </div>
     </div>

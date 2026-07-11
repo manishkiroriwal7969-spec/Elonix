@@ -147,6 +147,9 @@
                         <button id="adminTabBtnClients" class="dash-tab-btn">
                             <span class="icon">👥</span> Client Directory (CRM)
                         </button>
+                        <button id="adminTabBtnMlm" class="dash-tab-btn">
+                            <span class="icon">🕸️</span> MLM Network Audits
+                        </button>
                     </div>
 
                     <!-- SUB-VIEW 1: DEPOSITS AUDIT -->
@@ -348,6 +351,95 @@
                                         <!-- Populated dynamically via JS -->
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-VIEW 7: MLM NETWORK AUDITS -->
+                    <div id="adminViewMlm" class="admin-tab-view-panel" style="display: none;">
+                        <!-- MLM Metrics Cards -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                            <div class="dashboard-card card-glow" style="padding: 1.25rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">TOTAL REFERRAL LINKAGES</span>
+                                <span id="adminMlmTotalLinks" class="font-tech text-cyan" style="font-size: 1.5rem; font-weight: 600;">0 Links</span>
+                            </div>
+                            <div class="dashboard-card card-glow" style="padding: 1.25rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">TOTAL ORGANIZATIONAL VOLUME</span>
+                                <span id="adminMlmTotalVolume" class="font-tech text-cyan" style="font-size: 1.5rem; font-weight: 600;">0.00 ELX</span>
+                            </div>
+                            <div class="dashboard-card card-glow" style="padding: 1.25rem;">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); display: block; margin-bottom: 0.25rem;">ECOSYSTEM UTILITY POOL (PENALTIES)</span>
+                                <span id="adminMlmUtilityPool" class="font-tech text-success" style="font-size: 1.5rem; font-weight: 600;">0.00 ELX</span>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-grid grid-1-5col">
+                            <!-- Left: Referral Tree Visualizer -->
+                            <div class="dashboard-card card-glow" style="display: flex; flex-direction: column;">
+                                <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                                    <span class="icon">🕸️</span> Global Referral Tree Auditor
+                                </h3>
+                                <div id="adminMlmTreeContainer" class="font-tech" style="flex-grow: 1; min-height: 350px; overflow-y: auto; background: rgba(0, 0, 0, 0.2); border: 1px solid var(--border-titanium); border-radius: 6px; padding: 1.25rem; font-size: 0.85rem; line-height: 1.6;">
+                                    <!-- Network tree nodes rendered recursively -->
+                                </div>
+                            </div>
+
+                            <!-- Right: Referral CRM Actions & Search -->
+                            <div class="dashboard-card card-glow">
+                                <h3 class="card-title" style="border-bottom: 1px solid var(--border-titanium); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+                                    <span class="icon">⚙️</span> Client MLM Override Panel
+                                </h3>
+                                
+                                <div class="form-group" style="margin-bottom: 1.25rem;">
+                                    <label class="form-label">Search Client Username</label>
+                                    <div style="display: flex; gap: 0.5rem;">
+                                        <input type="text" id="adminMlmSearchUser" class="form-input text-cyan" placeholder="e.g. client_username" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;">
+                                        <button id="adminMlmBtnInspect" class="btn btn-secondary btn-sm">Inspect</button>
+                                    </div>
+                                </div>
+
+                                <div id="adminMlmClientDetails" style="display: none; background: rgba(255, 255, 255, 0.01); border: 1px solid var(--border-titanium); padding: 1rem; border-radius: 6px;">
+                                    <h4 class="text-cyan" style="margin-top: 0; margin-bottom: 1rem;" id="adminMlmClientTitle">Inspecting User: [username]</h4>
+                                    
+                                    <div class="form-group" style="margin-bottom: 1rem;">
+                                        <label class="form-label">Sponsor / Referrer</label>
+                                        <div style="display: flex; gap: 0.5rem;">
+                                            <input type="text" id="adminMlmClientSponsorInput" class="form-input text-cyan" style="padding: 0.4rem; font-size: 0.85rem;">
+                                            <button id="adminMlmBtnSaveSponsor" class="btn btn-primary btn-sm">Change</button>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-bottom: 1rem; font-size: 0.82rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: var(--text-muted);">Active Principal:</span>
+                                            <span id="adminMlmClientPrincipal" class="font-tech text-cyan">0.00 ELX</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: var(--text-muted);">Cumulative Earnings:</span>
+                                            <span id="adminMlmClientEarnings" class="font-tech text-success">0.00 ELX</span>
+                                        </div>
+                                        <div style="display: flex; justify-content: space-between;">
+                                            <span style="color: var(--text-muted);">Earning Cap:</span>
+                                            <span id="adminMlmClientCap" class="font-tech text-cyan">0.00 ELX</span>
+                                        </div>
+                                    </div>
+
+                                    <div style="margin-top: 1.25rem; border-top: 1px solid var(--border-titanium); padding-top: 1rem; margin-bottom: 1rem;">
+                                        <h5 class="text-cyan" style="margin-top: 0; margin-bottom: 0.75rem; font-size: 0.85rem;"><span class="icon">👥</span> Direct Referrals (Move Sponsor)</h5>
+                                        <div id="adminMlmDirectReferralsList" style="display: flex; flex-direction: column; gap: 0.5rem; max-height: 180px; overflow-y: auto;">
+                                            <!-- Dynamically populated list of referrals with change sponsor inputs -->
+                                        </div>
+                                    </div>
+
+                                    <div style="display: flex; flex-direction: column; gap: 0.75rem; border-top: 1px solid var(--border-titanium); padding-top: 1rem; margin-top: 0.5rem;">
+                                        <button id="adminMlmBtnResetCap" class="btn btn-secondary btn-sm" style="width: 100%;">🛡️ Reset Cap Earnings to 0</button>
+                                        <button id="adminMlmBtnDoubleCap" class="btn btn-secondary btn-sm" style="width: 100%;">🚀 Manual Cap Extension (+100 ELX principal value)</button>
+                                    </div>
+                                </div>
+                                
+                                <div id="adminMlmCrmPlaceholder" style="padding: 2rem 0; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                                    Search for a registered client to inspect or override their MLM credentials.
+                                </div>
                             </div>
                         </div>
                     </div>

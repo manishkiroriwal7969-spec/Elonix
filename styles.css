@@ -3530,6 +3530,46 @@ h1, h2, h3, h4 {
     transform: translateY(0);
 }
 
+/* Sub Tab Bar for Referral Network View */
+.ref-sub-nav {
+    display: flex;
+    gap: 1rem;
+    border-bottom: 1px solid var(--border-titanium);
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.5rem;
+    width: 100%;
+}
+
+.ref-sub-btn {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid var(--border-titanium);
+    color: var(--text-secondary);
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.6rem 1.25rem;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.25s ease;
+}
+
+.ref-sub-btn:hover {
+    background: rgba(0, 240, 255, 0.03);
+    border-color: rgba(0, 240, 255, 0.4);
+    color: var(--accent-cyan);
+    transform: translateY(-1px);
+}
+
+.ref-sub-btn.active {
+    background: linear-gradient(135deg, rgba(0, 240, 255, 0.08) 0%, rgba(0, 114, 255, 0.08) 100%) !important;
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+    box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+}
+
 
 
 
