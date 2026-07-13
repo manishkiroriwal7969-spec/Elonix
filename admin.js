@@ -9,6 +9,7 @@ const DOM = {
     dashboardContainer: document.getElementById("adminDashboardContainer"),
     loginForm: document.getElementById("adminLoginForm"),
     logoutBtn: document.getElementById("btnAdminLogout"),
+    backBtn: document.getElementById("btnBackToElonix"),
     errorMsg: document.getElementById("adminErrorMsg"),
 
     // Stats cards
@@ -89,6 +90,7 @@ function showAuthScreen() {
     if (DOM.authContainer) DOM.authContainer.style.display = "block";
     if (DOM.dashboardContainer) DOM.dashboardContainer.style.display = "none";
     if (DOM.logoutBtn) DOM.logoutBtn.style.display = "none";
+    if (DOM.backBtn) DOM.backBtn.style.display = "none";
     if (DOM.headerConnectBtn) DOM.headerConnectBtn.style.display = "none";
 }
 
@@ -96,6 +98,7 @@ function showDashboardScreen() {
     if (DOM.authContainer) DOM.authContainer.style.display = "none";
     if (DOM.dashboardContainer) DOM.dashboardContainer.style.display = "block";
     if (DOM.logoutBtn) DOM.logoutBtn.style.display = "block";
+    if (DOM.backBtn) DOM.backBtn.style.display = "block";
     if (DOM.headerConnectBtn) DOM.headerConnectBtn.style.display = "flex";
 }
 
@@ -708,8 +711,16 @@ function initAdminMiningTab() {
                 statusText.style.color = "var(--success)";
                 localStorage.setItem("elonix_daily_executed_date", new Date().toDateString());
                 localStorage.setItem("elonix_daily_executed_time", String(Date.now()));
+
+                const isSimulation = adminWeb3State.connectedAddress && !adminWeb3State.provider;
+                if (isSimulation) {
+                    const currentMockMined = parseInt(localStorage.getItem("elonix_mock_total_mined") || "700");
+                    localStorage.setItem("elonix_mock_total_mined", String(currentMockMined + 100));
+                }
+
                 setTimeout(() => {
                     updateAdminWalletUI();
+                    refreshAdminContractStats();
                 }, 3000);
             } else {
                 throw new Error("Execution failed on chain.");
@@ -929,6 +940,8 @@ function updateAdminWalletUI() {
         if (executeBtn && statusText) {
             let alreadyExecuted = false;
             let timeRemaining = 0;
+            // 24-hour daily execution lock condition has been removed to allow executing mining at any time
+            /*
             const lastMiningTimeSec = adminWeb3State.lastMiningTimeSec || Math.floor(parseInt(localStorage.getItem("elonix_daily_executed_time") || "0") / 1000);
             if (lastMiningTimeSec > 0) {
                 const lastMiningDate = new Date(lastMiningTimeSec * 1000);
@@ -942,6 +955,7 @@ function updateAdminWalletUI() {
                     timeRemaining = Math.max(0, Math.floor((tomorrow.getTime() - currentDate.getTime()) / 1000));
                 }
             }
+            */
 
             if (alreadyExecuted) {
                 executeBtn.disabled = true;

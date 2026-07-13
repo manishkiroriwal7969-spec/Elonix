@@ -379,6 +379,8 @@ function updateExecuteButtonState() {
             
             let alreadyExecuted = false;
             let timeRemaining = 0;
+            // 24-hour daily execution lock condition has been removed to allow executing mining at any time
+            /*
             if (lastTime > 0) {
                 const lastMiningDate = new Date(lastTime * 1000);
                 const currentDate = new Date();
@@ -391,6 +393,7 @@ function updateExecuteButtonState() {
                     timeRemaining = Math.max(0, Math.floor((tomorrow.getTime() - currentDate.getTime()) / 1000));
                 }
             }
+            */
             
             if (alreadyExecuted) {
                 executeMiningBtn.disabled = true;
