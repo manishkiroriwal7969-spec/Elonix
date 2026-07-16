@@ -1057,7 +1057,7 @@ async function refreshAdminContractStats() {
         } else if (window.ethereum) {
             provider = new ethers.BrowserProvider(window.ethereum);
         } else {
-            provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/bsc");
+            provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/");
         }
 
         const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);

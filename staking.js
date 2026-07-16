@@ -3,7 +3,7 @@
 // Contract & Public Stats configuration
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const BSC_CHAIN_ID = "0x38";
-const BSC_RPC_URL = "https://rpc.ankr.com/bsc";
+const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
 
 // Staking Pools Configuration
 const STAKING_POOLS = {
@@ -892,7 +892,7 @@ function setupDashboardEventListeners() {
                                 params: [{
                                     chainId: '0x38',
                                     chainName: "BNB Smart Chain",
-                                    rpcUrls: ["https://rpc.ankr.com/bsc"],
+                                    rpcUrls: [BSC_RPC_URL],
                                     nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
                                     blockExplorerUrls: ["https://bscscan.com"]
                                 }],

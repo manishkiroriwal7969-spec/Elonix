@@ -2,7 +2,7 @@
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";
 const BSC_CHAIN_ID = "0x38"; // 56 in decimal
-const BSC_RPC_URL = "https://rpc.ankr.com/bsc";
+const BSC_RPC_URL = "https://bsc-dataseed.binance.org/";
 
 // Contract ABI (view functions + state change function)
 const CONTRACT_ABI = [
