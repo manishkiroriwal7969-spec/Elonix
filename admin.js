@@ -1,4 +1,156 @@
+// Anti-Clickjacking Frame Busting Protocol
+if (self !== top) {
+    top.location = self.location;
+}
+
 // Admin Panel Console Controller Logic
+
+// HTML Escaping Sanitizer for XSS Protection
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Blockchain Transaction Hash Verifier
+async function verifyTxHashOnChain(provider, txHash, expectedAmount, expectedCurrency, tokenContractAddress) {
+    try {
+        const txDetails = await provider.getTransaction(txHash);
+        if (!txDetails) return { success: false, reason: "Transaction not found on-chain." };
+
+        // Confirm block inclusion and status
+        const receipt = await provider.getTransactionReceipt(txHash);
+        if (!receipt || receipt.status !== 1) {
+            return { success: false, reason: "Transaction failed or not confirmed." };
+        }
+
+        const targetReceiver = "0x00a013ae494C9cdD1C0eD7e8c56Eb7aa9442AC3b";
+        
+        if (expectedCurrency === "BNB") {
+            const receiverMatches = txDetails.to.toLowerCase() === targetReceiver.toLowerCase();
+            const valueEther = parseFloat(ethers.formatEther(txDetails.value));
+            const amountMatches = Math.abs(valueEther - expectedAmount) < 0.01; 
+
+            if (receiverMatches && amountMatches) {
+                return { success: true };
+            } else {
+                return { success: false, reason: `Recipient or amount mismatch. Recipient: ${txDetails.to}, Value: ${valueEther} BNB.` };
+            }
+        } else {
+            // BEP-20 Token Transfer
+            const tokenAddress = expectedCurrency === "CUSTOM" ? tokenContractAddress : {
+                USDT: "0x55d398326f99059fF775485246999027B3197955",
+                BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+                ELX: "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE"
+            }[expectedCurrency];
+            
+            if (!tokenAddress) return { success: false, reason: "Invalid expected token currency address." };
+            const tokenMatches = txDetails.to.toLowerCase() === tokenAddress.toLowerCase();
+            
+            // Decode input data for transfer(address,uint256)
+            const erc20Interface = new ethers.Interface([
+                "function transfer(address to, uint256 amount)"
+            ]);
+            const decoded = erc20Interface.decodeFunctionData("transfer", txDetails.data);
+            const recipient = decoded[0];
+            const amountWei = decoded[1];
+            
+            // Get decimals
+            const contract = new ethers.Contract(tokenAddress, ["function decimals() view returns (uint8)"], provider);
+            const decimals = await contract.decimals().catch(() => 18);
+            const valueTokens = parseFloat(ethers.formatUnits(amountWei, decimals));
+            
+            const receiverMatches = recipient.toLowerCase() === targetReceiver.toLowerCase();
+            const amountMatches = Math.abs(valueTokens - expectedAmount) < 0.01;
+
+            if (tokenMatches && receiverMatches && amountMatches) {
+                return { success: true };
+            } else {
+                return { success: false, reason: `Token address, recipient, or amount mismatch. Recipient: ${recipient}, Value: ${valueTokens} Tokens.` };
+            }
+        }
+    } catch (error) {
+        console.error("Verification failed:", error);
+        return { success: false, reason: error.message };
+    }
+}
+
+// Background auto-verifier for pending user deposits
+async function autoVerifyPendingDeposits() {
+    refreshAdminDatabase();
+    let hasChanges = false;
+    // Check if ethers is defined and we can connect to public provider
+    if (typeof ethers === "undefined") {
+        console.warn("Ethers library not available in admin context. Skipping auto-verification.");
+        return;
+    }
+    
+    let provider;
+    try {
+        provider = new ethers.JsonRpcProvider("https://bsc-dataseed.binance.org/", null, { staticNetwork: true });
+    } catch (err) {
+        console.error("Failed to initialize JSON-RPC provider:", err);
+        return;
+    }
+
+    const pendingTxList = [];
+    Object.keys(usersData).forEach(username => {
+        const user = usersData[username];
+        if (user.transactions) {
+            user.transactions.forEach((tx, txIndex) => {
+                if ((tx.type === "Token Deposit Proof" || tx.type === "Web3 Token Deposit") && tx.status === "Pending" && tx.txHash) {
+                    pendingTxList.push({ username, tx, txIndex });
+                }
+            });
+        }
+    });
+
+    if (pendingTxList.length === 0) return;
+    console.log(`Background Auto-Verification checking ${pendingTxList.length} pending deposits...`);
+
+    for (const item of pendingTxList) {
+        const { username, tx, txIndex } = item;
+        let expectedCurrency = tx.unit || "ELX";
+        if (expectedCurrency === "BEP-20 Custom") expectedCurrency = "CUSTOM";
+
+        const result = await verifyTxHashOnChain(provider, tx.txHash, tx.amount, expectedCurrency, tx.tokenAddress || "");
+        
+        if (result.success) {
+            tx.status = "Success";
+            tx.desc = `Deposit verified automatically on-chain. TxID: ${tx.txHash.slice(0, 10)}...`;
+            
+            // Re-fetch direct object to prevent stale data write
+            const targetUser = usersData[username.toLowerCase()];
+            if (targetUser && targetUser.transactions && targetUser.transactions[txIndex]) {
+                targetUser.transactions[txIndex].status = "Success";
+                targetUser.transactions[txIndex].desc = tx.desc;
+                targetUser.balance = (targetUser.balance || 0) + tx.amount;
+                targetUser.depositedBalance = (targetUser.depositedBalance || 0) + tx.amount;
+                hasChanges = true;
+                console.log(`Auto-Approved deposit of ${tx.amount} ${expectedCurrency} for ${username}`);
+            }
+        } else {
+            console.log(`Verification inconclusive for tx ${tx.txHash}: ${result.reason}`);
+        }
+    }
+
+    if (hasChanges) {
+        saveAdminDatabase();
+        renderStats();
+        
+        // Re-render current active view if it's pending deposits
+        const activeTab = adminTabs.find(t => t.btn && t.btn.classList.contains("active")) || adminTabs[0];
+        if (activeTab && activeTab.renderer === renderPendingDeposits) {
+            renderPendingDeposits();
+        }
+        showToast("Pending deposits verified and approved automatically!");
+    }
+}
+
 let usersData = JSON.parse(localStorage.getItem("elonix_staking_users")) || {};
 let adminSession = JSON.parse(localStorage.getItem("elonix_admin_session")) || null;
 let adminStatsState = { totalMined: 0, lastMiningTimeSec: 0, loadedFromContract: false };
@@ -199,6 +351,9 @@ function loadAdminDashboard() {
     refreshAdminDatabase();
     renderStats();
 
+    // Trigger on-chain auto-verification in background
+    autoVerifyPendingDeposits();
+
     // Auto load current active tab view
     const activeTab = adminTabs.find(t => t.btn && t.btn.classList.contains("active")) || adminTabs[0];
     if (activeTab) {
@@ -304,10 +459,10 @@ function renderKycQueue() {
 
             row.innerHTML = `
                 <td>${dateStr}</td>
-                <td style="font-weight: 600;">${user.username}</td>
-                <td>${user.kyc.fullName}</td>
-                <td>${user.kyc.country}</td>
-                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${user.kyc.docType}</td>
+                <td style="font-weight: 600;">${escapeHTML(user.username)}</td>
+                <td>${escapeHTML(user.kyc.fullName)}</td>
+                <td>${escapeHTML(user.kyc.country)}</td>
+                <td class="font-tech" style="font-size: 0.85rem; color: var(--text-secondary);">${escapeHTML(user.kyc.docType)}</td>
                 <td>
                     <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                         <button class="btn btn-row-action btn-primary-glow" onclick="openKycAuditModal('${username}')">🔍 Audit Profile</button>
@@ -350,9 +505,9 @@ function renderWithdrawalsQueue() {
 
                     row.innerHTML = `
                         <td>${dateStr}</td>
-                        <td style="font-weight: 600;">${user.username}</td>
+                        <td style="font-weight: 600;">${escapeHTML(user.username)}</td>
                         <td class="font-tech text-cyan" style="font-weight:700;">${w.amount.toFixed(2)} ELX</td>
-                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${w.address}</td>
+                        <td class="font-tech" style="font-size: 0.8rem; color: var(--text-secondary);">${escapeHTML(w.address)}</td>
                         <td>
                             <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
                                 <button class="btn btn-row-action btn-success-glow" onclick="verifyWithdrawalAction('${username}', ${wIndex}, 'approve')">Approve</button>
@@ -407,13 +562,13 @@ function renderSupportTicketsQueue() {
                     card.innerHTML = `
                         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 0.5rem;">
                             <div>
-                                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 0.5rem;">Client: ${user.username}</span>
-                                <strong style="font-size: 1rem; color: var(--text-primary);">${t.subject}</strong>
+                                <span style="font-size: 0.75rem; color: var(--text-muted); margin-right: 0.5rem;">Client: ${escapeHTML(user.username)}</span>
+                                <strong style="font-size: 1rem; color: var(--text-primary);">${escapeHTML(t.subject)}</strong>
                             </div>
                             <span style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</span>
                         </div>
                         <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
-                            ${t.message}
+                            ${escapeHTML(t.message)}
                         </p>
                         <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
                             <textarea id="reply_${username}_${tIndex}" class="form-input text-cyan" style="min-height: 60px; font-family: inherit; font-size: 0.85rem; padding: 0.4rem 0.6rem;" placeholder="Type support response message..."></textarea>

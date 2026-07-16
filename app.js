@@ -1,3 +1,8 @@
+// Anti-Clickjacking Frame Busting Protocol
+if (self !== top) {
+    top.location = self.location;
+}
+
 // contract configuration
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
 const OWNER_ADDRESS = "0xeeC57742341E153fdA2CC20fa0f44dAB3597aF20";

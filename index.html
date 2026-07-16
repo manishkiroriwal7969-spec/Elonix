@@ -12,16 +12,19 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://elonix.io">
     
+    <!-- Content Security Policy Meta Tag -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://bsc-dataseed.binance.org/ https://binance.llamarpc.com https://bsc-dataseed1.defibit.io/ https://metamask.app.link wss://*.bridge.walletconnect.org; frame-ancestors 'none';">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <!-- Stylesheet -->
     <link rel="stylesheet" href="styles.css">
     
-    <!-- Ethers.js Browser CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <!-- Ethers.js Browser CDN (with Subresource Integrity) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js" integrity="sha384-u0NcfwGT0MUYq60cVWPN34m99JhiJTCRG+0JOgmAQ++pTQ4w6AKkwhA9Wj/VjNRi" crossorigin="anonymous"></script>
 </head>
 <body>
     <!-- Toast Notification -->

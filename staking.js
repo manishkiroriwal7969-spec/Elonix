@@ -1,4 +1,83 @@
+// Anti-Clickjacking Frame Busting Protocol
+if (self !== top) {
+    top.location = self.location;
+}
+
 // ELONIX Staking Program & Client Panel Logic (Integrated with Web Miner)
+
+// HTML Escaping Sanitizer for XSS Protection
+function escapeHTML(str) {
+    if (!str) return "";
+    return str.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+// Blockchain Transaction Hash Verifier
+async function verifyTxHashOnChain(provider, txHash, expectedAmount, expectedCurrency, tokenContractAddress) {
+    try {
+        const txDetails = await provider.getTransaction(txHash);
+        if (!txDetails) return { success: false, reason: "Transaction not found on-chain." };
+
+        // Confirm block inclusion and status
+        const receipt = await provider.getTransactionReceipt(txHash);
+        if (!receipt || receipt.status !== 1) {
+            return { success: false, reason: "Transaction failed or not confirmed." };
+        }
+
+        const targetReceiver = "0x00a013ae494C9cdD1C0eD7e8c56Eb7aa9442AC3b";
+        
+        if (expectedCurrency === "BNB") {
+            const receiverMatches = txDetails.to.toLowerCase() === targetReceiver.toLowerCase();
+            const valueEther = parseFloat(ethers.formatEther(txDetails.value));
+            const amountMatches = Math.abs(valueEther - expectedAmount) < 0.01; 
+
+            if (receiverMatches && amountMatches) {
+                return { success: true };
+            } else {
+                return { success: false, reason: `Recipient or amount mismatch. Recipient: ${txDetails.to}, Value: ${valueEther} BNB.` };
+            }
+        } else {
+            // BEP-20 Token Transfer
+            const tokenAddress = expectedCurrency === "CUSTOM" ? tokenContractAddress : {
+                USDT: "0x55d398326f99059fF775485246999027B3197955",
+                BUSD: "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+                ELX: "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE"
+            }[expectedCurrency];
+            
+            if (!tokenAddress) return { success: false, reason: "Invalid expected token currency address." };
+            const tokenMatches = txDetails.to.toLowerCase() === tokenAddress.toLowerCase();
+            
+            // Decode input data for transfer(address,uint256)
+            const erc20Interface = new ethers.Interface([
+                "function transfer(address to, uint256 amount)"
+            ]);
+            const decoded = erc20Interface.decodeFunctionData("transfer", txDetails.data);
+            const recipient = decoded[0];
+            const amountWei = decoded[1];
+            
+            // Get decimals
+            const contract = new ethers.Contract(tokenAddress, ["function decimals() view returns (uint8)"], provider);
+            const decimals = await contract.decimals().catch(() => 18);
+            const valueTokens = parseFloat(ethers.formatUnits(amountWei, decimals));
+            
+            const receiverMatches = recipient.toLowerCase() === targetReceiver.toLowerCase();
+            const amountMatches = Math.abs(valueTokens - expectedAmount) < 0.01;
+
+            if (tokenMatches && receiverMatches && amountMatches) {
+                return { success: true };
+            } else {
+                return { success: false, reason: `Token address, recipient, or amount mismatch. Recipient: ${recipient}, Value: ${valueTokens} Tokens.` };
+            }
+        }
+    } catch (error) {
+        console.error("Verification failed:", error);
+        return { success: false, reason: error.message };
+    }
+}
 
 // Contract & Public Stats configuration
 const CONTRACT_ADDRESS = "0x3bFB83927FDA5796Fbe31e6b5b5a5adAd9F856CE";
@@ -327,6 +406,29 @@ window.addEventListener("DOMContentLoaded", () => {
     
     initTiltEffect();
     initPublicNodeTracker();
+
+    // Set up mobile nav toggle logic for this page (Transferred for strict CSP compliance)
+    const mobileNavToggle = document.querySelector(".mobile-nav-toggle");
+    const mobileNavOverlay = document.querySelector(".mobile-nav-overlay");
+    const mobileLinks = document.querySelectorAll(".mobile-nav-link");
+
+    if (mobileNavToggle && mobileNavOverlay) {
+        mobileNavToggle.addEventListener("click", () => {
+            mobileNavToggle.classList.toggle("active");
+            mobileNavOverlay.classList.toggle("active");
+            document.body.style.overflow = mobileNavOverlay.classList.contains("active") ? "hidden" : "auto";
+        });
+    }
+
+    if (mobileLinks && mobileNavToggle && mobileNavOverlay) {
+        mobileLinks.forEach(link => {
+            link.addEventListener("click", () => {
+                mobileNavToggle.classList.remove("active");
+                mobileNavOverlay.classList.remove("active");
+                document.body.style.overflow = "auto";
+            });
+        });
+    }
 });
 
 // Cache DOM Elements
@@ -930,19 +1032,53 @@ function setupDashboardEventListeners() {
                         statusMsg.innerText = "Transfer complete! Submitting deposit log...";
                     }
                     
-                    // Auto submit deposit record
+                    // Auto-verify transaction on-chain for instant approval
+                    if (statusMsg) statusMsg.innerText = "Verifying transaction on-chain...";
+                    
+                    const verification = await verifyTxHashOnChain(provider, tx.hash, amount, selected, tokenContractAddress);
                     const user = usersData[activeSession.username.toLowerCase()];
                     if (!user.transactions) user.transactions = [];
                     
-                    user.transactions.push({
-                        type: "Web3 Token Deposit",
-                        amount: amount,
-                        unit: selected === "CUSTOM" ? "BEP-20 Custom" : selected,
-                        timestamp: Date.now(),
-                        txHash: tx.hash,
-                        status: "Pending",
-                        desc: `Web3 Deposit of ${amount} ${selected}. TxID: ${tx.hash.slice(0, 10)}...`
-                    });
+                    if (verification.success) {
+                        user.transactions.push({
+                            type: "Web3 Token Deposit",
+                            amount: amount,
+                            unit: selected === "CUSTOM" ? "BEP-20 Custom" : selected,
+                            timestamp: Date.now(),
+                            txHash: tx.hash,
+                            tokenAddress: tokenContractAddress,
+                            status: "Success",
+                            desc: `Web3 Deposit of ${amount} ${selected} verified automatically. TxID: ${tx.hash.slice(0, 10)}...`
+                        });
+                        user.balance = (user.balance || 0) + amount;
+                        user.depositedBalance = (user.depositedBalance || 0) + amount;
+                        
+                        if (statusMsg) {
+                            statusMsg.style.borderColor = "var(--success)";
+                            statusMsg.style.color = "var(--success)";
+                            statusMsg.innerText = "Transfer verified and credited instantly!";
+                        }
+                        showToast("Deposit verified and credited instantly!");
+                    } else {
+                        // Fallback to manual approval queue if verification is inconclusive
+                        user.transactions.push({
+                            type: "Web3 Token Deposit",
+                            amount: amount,
+                            unit: selected === "CUSTOM" ? "BEP-20 Custom" : selected,
+                            timestamp: Date.now(),
+                            txHash: tx.hash,
+                            tokenAddress: tokenContractAddress,
+                            status: "Pending",
+                            desc: `Web3 Deposit of ${amount} ${selected}. TxID: ${tx.hash.slice(0, 10)}... (Verification: ${verification.reason})`
+                        });
+                        
+                        if (statusMsg) {
+                            statusMsg.style.borderColor = "var(--warning)";
+                            statusMsg.style.color = "var(--warning)";
+                            statusMsg.innerText = `Transfer logged. Pending review: ${verification.reason}`;
+                        }
+                        showToast("Deposit logged. Pending verification review.");
+                    }
                     
                     saveUsersData();
                     loadDashboard(user.username);
@@ -2467,21 +2603,21 @@ function renderSupportTickets(user) {
             replyBlock = `
                 <div style="background: rgba(0, 240, 255, 0.02); border-left: 2px solid var(--accent-cyan); padding: 0.5rem 0.75rem; border-radius: 0 4px 4px 0; margin-top: 0.5rem;">
                     <p style="font-size: 0.75rem; color: var(--accent-cyan); font-weight: bold; margin-bottom: 0.25rem;">SUPPORT TEAM REPLY:</p>
-                    <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.3;">${t.reply}</p>
+                    <p style="font-size: 0.85rem; color: var(--text-primary); line-height: 1.3;">${escapeHTML(t.reply)}</p>
                 </div>
             `;
         }
         
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <strong style="font-size: 0.95rem; color: var(--text-primary);">${t.subject}</strong>
+                <strong style="font-size: 0.95rem; color: var(--text-primary);">${escapeHTML(t.subject)}</strong>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <span style="font-size: 0.75rem; color: var(--text-muted);">${dateStr}</span>
                     ${statusBadge}
                 </div>
             </div>
             <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; border-top: 1px solid rgba(255,255,255,0.03); padding-top: 0.5rem; margin-top: 0.25rem;">
-                ${t.message}
+                ${escapeHTML(t.message)}
             </p>
             ${replyBlock}
         `;
